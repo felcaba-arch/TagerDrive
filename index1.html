@@ -1,0 +1,1094 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0">
+<title>Drive Tagger</title>
+<style>
+  :root {
+    --bg: #0f1117;
+    --surface: #1a1d27;
+    --surface2: #22263a;
+    --border: #2e3350;
+    --accent: #4f8ef7;
+    --accent2: #7c3aed;
+    --green: #22c55e;
+    --red: #ef4444;
+    --yellow: #f59e0b;
+    --text: #e8eaf6;
+    --muted: #6b7280;
+    --tag-colors: #4f8ef7,#7c3aed,#22c55e,#f59e0b,#ef4444,#ec4899,#14b8a6,#f97316;
+  }
+
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+
+  body {
+    font-family: 'Segoe UI', system-ui, sans-serif;
+    background: var(--bg);
+    color: var(--text);
+    min-height: 100vh;
+    font-size: 14px;
+  }
+
+  /* ── HEADER ── */
+  header {
+    background: var(--surface);
+    border-bottom: 1px solid var(--border);
+    padding: 12px 16px;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    position: sticky;
+    top: 0;
+    z-index: 100;
+  }
+  .logo { font-size: 18px; font-weight: 700; letter-spacing: -0.5px; }
+  .logo span { color: var(--accent); }
+  #btnAuth {
+    background: var(--accent);
+    color: #fff;
+    border: none;
+    border-radius: 8px;
+    padding: 8px 16px;
+    font-size: 13px;
+    font-weight: 600;
+    cursor: pointer;
+    display: flex;
+    align-items: center;
+    gap: 6px;
+  }
+  #btnAuth:hover { opacity: 0.9; }
+  #authStatus { font-size: 12px; color: var(--muted); }
+
+  /* ── TABS ── */
+  .tabs {
+    display: flex;
+    background: var(--surface);
+    border-bottom: 1px solid var(--border);
+    overflow-x: auto;
+  }
+  .tab {
+    padding: 10px 18px;
+    font-size: 13px;
+    font-weight: 500;
+    color: var(--muted);
+    cursor: pointer;
+    border-bottom: 2px solid transparent;
+    white-space: nowrap;
+    transition: all 0.15s;
+  }
+  .tab.active {
+    color: var(--accent);
+    border-bottom-color: var(--accent);
+  }
+
+  /* ── MAIN ── */
+  main { padding: 16px; max-width: 700px; margin: 0 auto; }
+
+  .panel { display: none; }
+  .panel.active { display: block; }
+
+  /* ── CARDS ── */
+  .card {
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: 12px;
+    padding: 16px;
+    margin-bottom: 12px;
+  }
+  .card-title {
+    font-size: 13px;
+    font-weight: 600;
+    color: var(--muted);
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+    margin-bottom: 12px;
+  }
+
+  /* ── FOLDER LIST ── */
+  .folder-item {
+    display: flex;
+    align-items: flex-start;
+    gap: 10px;
+    padding: 10px;
+    border-radius: 8px;
+    border: 1px solid var(--border);
+    margin-bottom: 8px;
+    background: var(--surface2);
+    cursor: pointer;
+    transition: border-color 0.15s;
+  }
+  .folder-item:hover { border-color: var(--accent); }
+  .folder-item.selected { border-color: var(--accent); background: #1e2a4a; }
+  .folder-icon { font-size: 22px; flex-shrink: 0; margin-top: 2px; }
+  .folder-info { flex: 1; min-width: 0; }
+  .folder-name {
+    font-weight: 600;
+    font-size: 14px;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+  }
+  .folder-path { font-size: 11px; color: var(--muted); margin-top: 2px; }
+  .folder-tags { display: flex; flex-wrap: wrap; gap: 4px; margin-top: 6px; }
+
+  /* ── TAGS ── */
+  .tag {
+    display: inline-flex;
+    align-items: center;
+    gap: 4px;
+    padding: 2px 8px;
+    border-radius: 20px;
+    font-size: 11px;
+    font-weight: 600;
+    cursor: pointer;
+  }
+  .tag .remove {
+    font-size: 10px;
+    opacity: 0.7;
+    margin-left: 2px;
+  }
+  .tag-pill {
+    padding: 4px 10px;
+    border-radius: 20px;
+    font-size: 12px;
+    font-weight: 600;
+    cursor: pointer;
+    border: 2px solid transparent;
+    transition: all 0.15s;
+  }
+  .tag-pill:hover { opacity: 0.85; }
+  .tag-pill.selected-filter { border-color: #fff; }
+
+  /* ── INPUTS ── */
+  input[type=text], textarea, select {
+    width: 100%;
+    background: var(--surface2);
+    border: 1px solid var(--border);
+    border-radius: 8px;
+    color: var(--text);
+    padding: 10px 12px;
+    font-size: 14px;
+    outline: none;
+    font-family: inherit;
+  }
+  input[type=text]:focus, textarea:focus {
+    border-color: var(--accent);
+  }
+  textarea { resize: vertical; min-height: 70px; }
+
+  label { font-size: 12px; color: var(--muted); display: block; margin-bottom: 4px; margin-top: 10px; }
+
+  /* ── BUTTONS ── */
+  .btn {
+    border: none;
+    border-radius: 8px;
+    padding: 9px 16px;
+    font-size: 13px;
+    font-weight: 600;
+    cursor: pointer;
+    transition: opacity 0.15s;
+  }
+  .btn:hover { opacity: 0.85; }
+  .btn-primary { background: var(--accent); color: #fff; }
+  .btn-secondary { background: var(--surface2); color: var(--text); border: 1px solid var(--border); }
+  .btn-danger { background: var(--red); color: #fff; }
+  .btn-success { background: var(--green); color: #fff; }
+  .btn-sm { padding: 5px 10px; font-size: 12px; }
+  .btn-row { display: flex; gap: 8px; margin-top: 12px; flex-wrap: wrap; }
+
+  /* ── COLOR PICKER ── */
+  .color-grid {
+    display: flex;
+    gap: 8px;
+    flex-wrap: wrap;
+    margin-top: 6px;
+  }
+  .color-dot {
+    width: 28px;
+    height: 28px;
+    border-radius: 50%;
+    cursor: pointer;
+    border: 2px solid transparent;
+    transition: transform 0.1s;
+  }
+  .color-dot:hover { transform: scale(1.15); }
+  .color-dot.selected { border-color: #fff; transform: scale(1.15); }
+
+  /* ── SEARCH BUILDER ── */
+  .search-tag-grid {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 6px;
+    margin-top: 8px;
+  }
+  .logic-toggle {
+    display: flex;
+    gap: 0;
+    border: 1px solid var(--border);
+    border-radius: 8px;
+    overflow: hidden;
+    width: fit-content;
+    margin-top: 8px;
+  }
+  .logic-btn {
+    padding: 6px 14px;
+    font-size: 12px;
+    font-weight: 700;
+    cursor: pointer;
+    border: none;
+    background: var(--surface2);
+    color: var(--muted);
+    transition: all 0.15s;
+  }
+  .logic-btn.active { background: var(--accent); color: #fff; }
+
+  /* ── RESULTS ── */
+  .result-count {
+    font-size: 12px;
+    color: var(--muted);
+    margin-bottom: 10px;
+  }
+
+  /* ── SAVED SEARCHES ── */
+  .saved-search {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 10px;
+    border: 1px solid var(--border);
+    border-radius: 8px;
+    margin-bottom: 6px;
+    background: var(--surface2);
+  }
+  .saved-search-info { flex: 1; }
+  .saved-search-name { font-weight: 600; font-size: 13px; }
+  .saved-search-tags { font-size: 11px; color: var(--muted); margin-top: 2px; }
+
+  /* ── NOTES ── */
+  .note-text {
+    font-size: 12px;
+    color: var(--muted);
+    margin-top: 6px;
+    font-style: italic;
+    line-height: 1.5;
+  }
+
+  /* ── EMPTY STATE ── */
+  .empty {
+    text-align: center;
+    padding: 40px 20px;
+    color: var(--muted);
+  }
+  .empty-icon { font-size: 40px; margin-bottom: 10px; }
+  .empty-text { font-size: 14px; }
+
+  /* ── MODAL ── */
+  .modal-overlay {
+    display: none;
+    position: fixed;
+    inset: 0;
+    background: rgba(0,0,0,0.7);
+    z-index: 200;
+    align-items: flex-end;
+    justify-content: center;
+  }
+  .modal-overlay.open { display: flex; }
+  .modal {
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: 16px 16px 0 0;
+    padding: 20px 16px;
+    width: 100%;
+    max-width: 700px;
+    max-height: 85vh;
+    overflow-y: auto;
+  }
+  .modal-title {
+    font-size: 16px;
+    font-weight: 700;
+    margin-bottom: 16px;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+  }
+  .modal-close {
+    background: none;
+    border: none;
+    color: var(--muted);
+    font-size: 20px;
+    cursor: pointer;
+  }
+
+  /* ── TOAST ── */
+  #toast {
+    position: fixed;
+    bottom: 20px;
+    left: 50%;
+    transform: translateX(-50%) translateY(80px);
+    background: var(--green);
+    color: #fff;
+    padding: 10px 20px;
+    border-radius: 20px;
+    font-size: 13px;
+    font-weight: 600;
+    transition: transform 0.3s;
+    z-index: 300;
+    white-space: nowrap;
+  }
+  #toast.show { transform: translateX(-50%) translateY(0); }
+  #toast.error { background: var(--red); }
+
+  /* ── CONNECT SCREEN ── */
+  #connectScreen {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    min-height: 60vh;
+    text-align: center;
+    padding: 24px;
+  }
+  #connectScreen .big-icon { font-size: 64px; margin-bottom: 16px; }
+  #connectScreen h2 { font-size: 22px; font-weight: 700; margin-bottom: 8px; }
+  #connectScreen p { color: var(--muted); font-size: 14px; margin-bottom: 24px; line-height: 1.6; }
+
+  .divider { border: none; border-top: 1px solid var(--border); margin: 16px 0; }
+
+  .badge {
+    display: inline-block;
+    padding: 2px 8px;
+    border-radius: 10px;
+    font-size: 11px;
+    font-weight: 700;
+    background: var(--surface2);
+    color: var(--muted);
+    border: 1px solid var(--border);
+  }
+
+  /* scrollbar */
+  ::-webkit-scrollbar { width: 4px; }
+  ::-webkit-scrollbar-track { background: transparent; }
+  ::-webkit-scrollbar-thumb { background: var(--border); border-radius: 4px; }
+</style>
+</head>
+<body>
+
+<!-- HEADER -->
+<header>
+  <div class="logo">Drive<span>Tagger</span></div>
+  <div style="display:flex;align-items:center;gap:10px;">
+    <span id="authStatus">No conectado</span>
+    <button id="btnAuth" onclick="handleAuth()">🔗 Conectar Drive</button>
+  </div>
+</header>
+
+<!-- TABS -->
+<div class="tabs" id="appTabs" style="display:none">
+  <div class="tab active" onclick="switchTab('carpetas')">📁 Carpetas</div>
+  <div class="tab" onclick="switchTab('buscar')">🔍 Buscar</div>
+  <div class="tab" onclick="switchTab('etiquetas')">🏷️ Etiquetas</div>
+  <div class="tab" onclick="switchTab('guardadas')">⭐ Guardadas</div>
+</div>
+
+<main>
+
+  <!-- CONNECT SCREEN -->
+  <div id="connectScreen">
+    <div class="big-icon">🗂️</div>
+    <h2>Drive Tagger</h2>
+    <p>Etiquetá tus carpetas de Google Drive con tags propios, buscá por combinaciones y guardá búsquedas frecuentes.<br><br>Conectá tu cuenta para empezar.</p>
+    <button class="btn btn-primary" style="font-size:15px;padding:12px 28px;" onclick="handleAuth()">
+      🔗 Conectar con Google Drive
+    </button>
+    <p style="margin-top:16px;font-size:12px;color:var(--muted);">
+      Los tags se guardan localmente en tu dispositivo.<br>Nunca se modifican tus archivos de Drive.
+    </p>
+  </div>
+
+  <!-- PANEL: CARPETAS -->
+  <div class="panel" id="panel-carpetas">
+    <div class="card">
+      <div style="display:flex;gap:8px;align-items:center;">
+        <input type="text" id="searchFolders" placeholder="🔎 Filtrar carpetas por nombre..." oninput="renderFolders()">
+        <button class="btn btn-secondary btn-sm" onclick="loadFolders()" title="Recargar">↺</button>
+      </div>
+    </div>
+
+    <div id="folderList">
+      <div class="empty">
+        <div class="empty-icon">📂</div>
+        <div class="empty-text">Cargando carpetas...</div>
+      </div>
+    </div>
+  </div>
+
+  <!-- PANEL: BUSCAR -->
+  <div class="panel" id="panel-buscar">
+    <div class="card">
+      <div class="card-title">Buscar por etiquetas</div>
+
+      <label>Lógica de búsqueda</label>
+      <div class="logic-toggle">
+        <button class="logic-btn active" id="logicAnd" onclick="setLogic('AND')">Y (todas)</button>
+        <button class="logic-btn" id="logicOr" onclick="setLogic('OR')">O (alguna)</button>
+      </div>
+
+      <label>Seleccioná etiquetas</label>
+      <div class="search-tag-grid" id="searchTagGrid"></div>
+
+      <div class="btn-row">
+        <button class="btn btn-primary" onclick="runSearch()">🔍 Buscar</button>
+        <button class="btn btn-secondary" onclick="clearSearch()">Limpiar</button>
+        <button class="btn btn-secondary btn-sm" onclick="openSaveSearch()" id="btnSaveSearch" style="display:none">⭐ Guardar búsqueda</button>
+      </div>
+    </div>
+
+    <div id="searchResults"></div>
+  </div>
+
+  <!-- PANEL: ETIQUETAS -->
+  <div class="panel" id="panel-etiquetas">
+    <div class="card">
+      <div class="card-title">Crear nueva etiqueta</div>
+      <label>Nombre</label>
+      <input type="text" id="newTagName" placeholder="Ej: Claro, Meta Ads, Urgente...">
+      <label>Color</label>
+      <div class="color-grid" id="colorGrid"></div>
+      <div class="btn-row">
+        <button class="btn btn-primary" onclick="createTag()">+ Crear etiqueta</button>
+      </div>
+    </div>
+
+    <div class="card">
+      <div class="card-title">Mis etiquetas</div>
+      <div id="tagLibrary"></div>
+    </div>
+  </div>
+
+  <!-- PANEL: GUARDADAS -->
+  <div class="panel" id="panel-guardadas">
+    <div class="card">
+      <div class="card-title">Búsquedas guardadas</div>
+      <div id="savedSearchList"></div>
+    </div>
+  </div>
+
+</main>
+
+<!-- MODAL: Editar carpeta -->
+<div class="modal-overlay" id="modalFolder">
+  <div class="modal">
+    <div class="modal-title">
+      <span id="modalFolderName">Carpeta</span>
+      <button class="modal-close" onclick="closeModal('modalFolder')">✕</button>
+    </div>
+
+    <div class="card-title">Etiquetas actuales</div>
+    <div id="modalCurrentTags" style="display:flex;flex-wrap:wrap;gap:6px;margin-bottom:12px;"></div>
+
+    <div class="card-title">Agregar etiqueta</div>
+    <div id="modalTagPicker" style="display:flex;flex-wrap:wrap;gap:6px;margin-bottom:12px;"></div>
+
+    <hr class="divider">
+
+    <div class="card-title">Nota</div>
+    <textarea id="modalNote" placeholder="Agregá una nota sobre esta carpeta..."></textarea>
+
+    <div class="btn-row">
+      <button class="btn btn-success" onclick="saveFolder()">💾 Guardar</button>
+      <button class="btn btn-secondary" onclick="closeModal('modalFolder')">Cancelar</button>
+    </div>
+  </div>
+</div>
+
+<!-- MODAL: Guardar búsqueda -->
+<div class="modal-overlay" id="modalSaveSearch">
+  <div class="modal">
+    <div class="modal-title">
+      <span>Guardar búsqueda</span>
+      <button class="modal-close" onclick="closeModal('modalSaveSearch')">✕</button>
+    </div>
+    <label>Nombre de la búsqueda</label>
+    <input type="text" id="savedSearchName" placeholder="Ej: Campañas activas de Claro...">
+    <div class="btn-row">
+      <button class="btn btn-primary" onclick="saveSearch()">⭐ Guardar</button>
+      <button class="btn btn-secondary" onclick="closeModal('modalSaveSearch')">Cancelar</button>
+    </div>
+  </div>
+</div>
+
+<!-- TOAST -->
+<div id="toast">✓ Guardado</div>
+
+<script>
+// ─────────────────────────────────────────────
+// CONFIG Google Drive API
+// ─────────────────────────────────────────────
+const CLIENT_ID = ''; // El usuario pone su Client ID aquí
+const SCOPES = 'https://www.googleapis.com/auth/drive.metadata.readonly';
+const DISCOVERY_DOC = 'https://www.googleapis.com/discovery/v1/apis/drive/v3/rest';
+
+let gapiReady = false;
+let tokenClient = null;
+let isSignedIn = false;
+
+// ─────────────────────────────────────────────
+// ESTADO LOCAL
+// ─────────────────────────────────────────────
+let state = {
+  folders: [],       // carpetas de Drive
+  tags: [],          // { id, name, color }
+  folderData: {},    // { folderId: { tags: [], note: '' } }
+  savedSearches: [], // { id, name, tagIds, logic }
+  searchActive: [],  // tag ids seleccionados para búsqueda
+  searchLogic: 'AND',
+  editingFolderId: null,
+};
+
+const COLORS = ['#4f8ef7','#7c3aed','#22c55e','#f59e0b','#ef4444','#ec4899','#14b8a6','#f97316'];
+let selectedColor = COLORS[0];
+
+function save() {
+  localStorage.setItem('driverTagger_v1', JSON.stringify({
+    tags: state.tags,
+    folderData: state.folderData,
+    savedSearches: state.savedSearches,
+  }));
+}
+
+function load() {
+  try {
+    const d = JSON.parse(localStorage.getItem('driverTagger_v1') || '{}');
+    state.tags = d.tags || [];
+    state.folderData = d.folderData || {};
+    state.savedSearches = d.savedSearches || [];
+  } catch(e) {}
+}
+
+// ─────────────────────────────────────────────
+// AUTH
+// ─────────────────────────────────────────────
+function handleAuth() {
+  if (!localStorage.getItem('dt_client_id')) {
+    showConfigModal();
+    return;
+  }
+  if (!isSignedIn) {
+    tokenClient.requestAccessToken({ prompt: '' }); // sin prompt = silencioso si ya aprobó antes
+  } else {
+    const token = gapi.client.getToken();
+    if (token) google.accounts.oauth2.revoke(token.access_token, () => {});
+    gapi.client.setToken('');
+    localStorage.removeItem('dt_token');
+    isSignedIn = false;
+    updateAuthUI(false);
+  }
+}
+
+async function initGapi() {
+  await gapi.client.init({ discoveryDocs: [DISCOVERY_DOC] });
+  gapiReady = true;
+}
+
+// Intenta restaurar sesión con token guardado
+async function tryRestoreSession() {
+  const saved = localStorage.getItem('dt_token');
+  if (!saved) return false;
+  try {
+    const tokenData = JSON.parse(saved);
+    // Verificar que no expiró (guardamos timestamp de expiración)
+    if (Date.now() > tokenData.expires_at) {
+      localStorage.removeItem('dt_token');
+      return false;
+    }
+    gapi.client.setToken({ access_token: tokenData.access_token });
+    isSignedIn = true;
+    return true;
+  } catch(e) {
+    localStorage.removeItem('dt_token');
+    return false;
+  }
+}
+
+function updateAuthUI(signed) {
+  const btn = document.getElementById('btnAuth');
+  const status = document.getElementById('authStatus');
+  if (signed) {
+    btn.textContent = '🔓 Desconectar';
+    btn.style.background = '#374151';
+    status.textContent = '✓ Conectado';
+    status.style.color = 'var(--green)';
+    document.getElementById('connectScreen').style.display = 'none';
+    document.getElementById('appTabs').style.display = 'flex';
+    document.querySelectorAll('.panel').forEach(p => {
+      if (p.id === 'panel-carpetas') p.classList.add('active');
+    });
+  } else {
+    btn.textContent = '🔗 Conectar Drive';
+    btn.style.background = 'var(--accent)';
+    status.textContent = 'No conectado';
+    status.style.color = 'var(--muted)';
+    document.getElementById('connectScreen').style.display = 'flex';
+    document.getElementById('appTabs').style.display = 'none';
+  }
+}
+
+// ─────────────────────────────────────────────
+// CONFIG MODAL (Client ID)
+// ─────────────────────────────────────────────
+function showConfigModal() {
+  const html = `
+  <div class="modal-overlay open" id="modalConfig">
+    <div class="modal">
+      <div class="modal-title">
+        <span>⚙️ Configurar Google Drive API</span>
+        <button class="modal-close" onclick="document.getElementById('modalConfig').remove()">✕</button>
+      </div>
+      <p style="color:var(--muted);font-size:13px;line-height:1.6;margin-bottom:12px;">
+        Para conectar Drive necesitás un <strong style="color:var(--text)">Client ID</strong> de Google Cloud Console.
+        Es gratis y solo toma 5 minutos.
+      </p>
+      <div style="background:var(--surface2);border-radius:8px;padding:12px;font-size:12px;color:var(--muted);margin-bottom:12px;line-height:1.8;">
+        1. Ir a <strong style="color:var(--accent)">console.cloud.google.com</strong><br>
+        2. Crear proyecto → APIs → Drive API → Habilitar<br>
+        3. Credenciales → OAuth 2.0 → Tipo: Aplicación web<br>
+        4. Origen JS autorizado: <code style="color:var(--accent)">${window.location.origin}</code><br>
+        5. Copiar el Client ID aquí abajo
+      </div>
+      <label>Client ID</label>
+      <input type="text" id="inputClientId" placeholder="xxxx.apps.googleusercontent.com">
+      <div class="btn-row">
+        <button class="btn btn-primary" onclick="applyClientId()">Guardar y conectar</button>
+      </div>
+    </div>
+  </div>`;
+  document.body.insertAdjacentHTML('beforeend', html);
+}
+
+function applyClientId() {
+  const id = document.getElementById('inputClientId').value.trim();
+  if (!id) { toast('Ingresá el Client ID', true); return; }
+  localStorage.setItem('dt_client_id', id);
+  toast('Recargá la página para aplicar el Client ID');
+  // Recargar con el id guardado
+  setTimeout(() => location.reload(), 1500);
+}
+
+// ─────────────────────────────────────────────
+// CARPETAS
+// ─────────────────────────────────────────────
+async function loadFolders() {
+  if (!isSignedIn) return;
+  try {
+    const resp = await gapi.client.drive.files.list({
+      q: "mimeType='application/vnd.google-apps.folder' and trashed=false",
+      fields: 'files(id,name,parents)',
+      pageSize: 200,
+      orderBy: 'name',
+    });
+    state.folders = resp.result.files || [];
+    renderFolders();
+    renderSearchTagGrid();
+  } catch(e) {
+    toast('Error cargando carpetas', true);
+  }
+}
+
+function renderFolders() {
+  const q = document.getElementById('searchFolders').value.toLowerCase();
+  const filtered = state.folders.filter(f => f.name.toLowerCase().includes(q));
+  const el = document.getElementById('folderList');
+
+  if (!filtered.length) {
+    el.innerHTML = `<div class="empty"><div class="empty-icon">📂</div><div class="empty-text">No hay carpetas</div></div>`;
+    return;
+  }
+
+  el.innerHTML = filtered.map(f => {
+    const data = state.folderData[f.id] || { tags: [], note: '' };
+    const tagPills = data.tags.map(tid => {
+      const tag = state.tags.find(t => t.id === tid);
+      if (!tag) return '';
+      return `<span class="tag" style="background:${tag.color}22;color:${tag.color};border:1px solid ${tag.color}44">${tag.name}</span>`;
+    }).join('');
+    const noteSnip = data.note ? `<div class="note-text">📝 ${data.note.substring(0,60)}${data.note.length>60?'...':''}</div>` : '';
+    return `
+    <div class="folder-item" onclick="openFolderModal('${f.id}')">
+      <div class="folder-icon">📁</div>
+      <div class="folder-info">
+        <div class="folder-name">${f.name}</div>
+        <div class="folder-tags">${tagPills}</div>
+        ${noteSnip}
+      </div>
+    </div>`;
+  }).join('');
+}
+
+// ─────────────────────────────────────────────
+// MODAL CARPETA
+// ─────────────────────────────────────────────
+function openFolderModal(folderId) {
+  state.editingFolderId = folderId;
+  const folder = state.folders.find(f => f.id === folderId);
+  const data = state.folderData[folderId] || { tags: [], note: '' };
+
+  document.getElementById('modalFolderName').textContent = '📁 ' + folder.name;
+  document.getElementById('modalNote').value = data.note || '';
+
+  renderModalCurrentTags(data.tags);
+  renderModalTagPicker(data.tags);
+  document.getElementById('modalFolder').classList.add('open');
+}
+
+function renderModalCurrentTags(activeTags) {
+  const el = document.getElementById('modalCurrentTags');
+  if (!activeTags.length) {
+    el.innerHTML = '<span style="color:var(--muted);font-size:12px;">Sin etiquetas</span>';
+    return;
+  }
+  el.innerHTML = activeTags.map(tid => {
+    const tag = state.tags.find(t => t.id === tid);
+    if (!tag) return '';
+    return `<span class="tag" style="background:${tag.color}22;color:${tag.color};border:1px solid ${tag.color}44">
+      ${tag.name}
+      <span class="remove" onclick="removeTagFromModal('${tid}')">✕</span>
+    </span>`;
+  }).join('');
+}
+
+function renderModalTagPicker(activeTags) {
+  const el = document.getElementById('modalTagPicker');
+  const available = state.tags.filter(t => !activeTags.includes(t.id));
+  if (!available.length) {
+    el.innerHTML = '<span style="color:var(--muted);font-size:12px;">Todas las etiquetas ya están aplicadas</span>';
+    return;
+  }
+  el.innerHTML = available.map(tag =>
+    `<span class="tag-pill" style="background:${tag.color}22;color:${tag.color};border:1px solid ${tag.color}44"
+      onclick="addTagToModal('${tag.id}')">${tag.name}</span>`
+  ).join('');
+}
+
+function addTagToModal(tagId) {
+  const data = state.folderData[state.editingFolderId] || { tags: [], note: '' };
+  if (!data.tags.includes(tagId)) data.tags.push(tagId);
+  state.folderData[state.editingFolderId] = data;
+  renderModalCurrentTags(data.tags);
+  renderModalTagPicker(data.tags);
+}
+
+function removeTagFromModal(tagId) {
+  const data = state.folderData[state.editingFolderId] || { tags: [], note: '' };
+  data.tags = data.tags.filter(t => t !== tagId);
+  state.folderData[state.editingFolderId] = data;
+  renderModalCurrentTags(data.tags);
+  renderModalTagPicker(data.tags);
+}
+
+function saveFolder() {
+  const data = state.folderData[state.editingFolderId] || { tags: [], note: '' };
+  data.note = document.getElementById('modalNote').value;
+  state.folderData[state.editingFolderId] = data;
+  save();
+  closeModal('modalFolder');
+  renderFolders();
+  toast('Carpeta guardada ✓');
+}
+
+// ─────────────────────────────────────────────
+// BÚSQUEDA
+// ─────────────────────────────────────────────
+function renderSearchTagGrid() {
+  const el = document.getElementById('searchTagGrid');
+  if (!state.tags.length) {
+    el.innerHTML = '<span style="color:var(--muted);font-size:12px;">Creá etiquetas primero</span>';
+    return;
+  }
+  el.innerHTML = state.tags.map(tag => {
+    const active = state.searchActive.includes(tag.id);
+    return `<span class="tag-pill ${active ? 'selected-filter' : ''}"
+      style="background:${tag.color}${active?'44':'22'};color:${tag.color};border:1px solid ${tag.color}${active?'':'44'}"
+      onclick="toggleSearchTag('${tag.id}')">${tag.name}</span>`;
+  }).join('');
+}
+
+function toggleSearchTag(tagId) {
+  if (state.searchActive.includes(tagId)) {
+    state.searchActive = state.searchActive.filter(t => t !== tagId);
+  } else {
+    state.searchActive.push(tagId);
+  }
+  renderSearchTagGrid();
+  document.getElementById('btnSaveSearch').style.display =
+    state.searchActive.length ? 'inline-flex' : 'none';
+}
+
+function setLogic(logic) {
+  state.searchLogic = logic;
+  document.getElementById('logicAnd').classList.toggle('active', logic === 'AND');
+  document.getElementById('logicOr').classList.toggle('active', logic === 'OR');
+}
+
+function runSearch() {
+  if (!state.searchActive.length) {
+    toast('Seleccioná al menos una etiqueta', true);
+    return;
+  }
+  const results = state.folders.filter(f => {
+    const data = state.folderData[f.id];
+    if (!data || !data.tags.length) return false;
+    if (state.searchLogic === 'AND') {
+      return state.searchActive.every(tid => data.tags.includes(tid));
+    } else {
+      return state.searchActive.some(tid => data.tags.includes(tid));
+    }
+  });
+
+  const el = document.getElementById('searchResults');
+  const logicLabel = state.searchLogic === 'AND' ? 'con TODAS las etiquetas' : 'con ALGUNA etiqueta';
+  el.innerHTML = `<div class="result-count">${results.length} carpeta(s) encontrada(s) ${logicLabel}</div>`;
+
+  if (!results.length) {
+    el.innerHTML += `<div class="empty"><div class="empty-icon">🔍</div><div class="empty-text">Sin resultados</div></div>`;
+    return;
+  }
+
+  el.innerHTML += results.map(f => {
+    const data = state.folderData[f.id];
+    const tagPills = data.tags.map(tid => {
+      const tag = state.tags.find(t => t.id === tid);
+      if (!tag) return '';
+      return `<span class="tag" style="background:${tag.color}22;color:${tag.color};border:1px solid ${tag.color}44">${tag.name}</span>`;
+    }).join('');
+    return `
+    <div class="folder-item" onclick="openFolderModal('${f.id}')">
+      <div class="folder-icon">📁</div>
+      <div class="folder-info">
+        <div class="folder-name">${f.name}</div>
+        <div class="folder-tags">${tagPills}</div>
+      </div>
+    </div>`;
+  }).join('');
+}
+
+function clearSearch() {
+  state.searchActive = [];
+  renderSearchTagGrid();
+  document.getElementById('searchResults').innerHTML = '';
+  document.getElementById('btnSaveSearch').style.display = 'none';
+}
+
+// ─────────────────────────────────────────────
+// GUARDAR BÚSQUEDAS
+// ─────────────────────────────────────────────
+function openSaveSearch() {
+  document.getElementById('savedSearchName').value = '';
+  document.getElementById('modalSaveSearch').classList.add('open');
+}
+
+function saveSearch() {
+  const name = document.getElementById('savedSearchName').value.trim();
+  if (!name) { toast('Ingresá un nombre', true); return; }
+  state.savedSearches.push({
+    id: Date.now().toString(),
+    name,
+    tagIds: [...state.searchActive],
+    logic: state.searchLogic,
+  });
+  save();
+  closeModal('modalSaveSearch');
+  toast('Búsqueda guardada ⭐');
+  renderSavedSearches();
+}
+
+function renderSavedSearches() {
+  const el = document.getElementById('savedSearchList');
+  if (!state.savedSearches.length) {
+    el.innerHTML = `<div class="empty"><div class="empty-icon">⭐</div><div class="empty-text">No hay búsquedas guardadas aún</div></div>`;
+    return;
+  }
+  el.innerHTML = state.savedSearches.map(s => {
+    const tagNames = s.tagIds.map(tid => {
+      const t = state.tags.find(x => x.id === tid);
+      return t ? t.name : '';
+    }).filter(Boolean).join(` ${s.logic === 'AND' ? 'Y' : 'O'} `);
+    return `
+    <div class="saved-search">
+      <div class="saved-search-info">
+        <div class="saved-search-name">⭐ ${s.name}</div>
+        <div class="saved-search-tags">${tagNames} · ${s.logic === 'AND' ? 'Todas' : 'Alguna'}</div>
+      </div>
+      <div style="display:flex;gap:6px;">
+        <button class="btn btn-primary btn-sm" onclick="runSavedSearch('${s.id}')">Buscar</button>
+        <button class="btn btn-danger btn-sm" onclick="deleteSavedSearch('${s.id}')">✕</button>
+      </div>
+    </div>`;
+  }).join('');
+}
+
+function runSavedSearch(id) {
+  const s = state.savedSearches.find(x => x.id === id);
+  if (!s) return;
+  state.searchActive = [...s.tagIds];
+  state.searchLogic = s.logic;
+  switchTab('buscar');
+  renderSearchTagGrid();
+  setLogic(s.logic);
+  runSearch();
+}
+
+function deleteSavedSearch(id) {
+  state.savedSearches = state.savedSearches.filter(s => s.id !== id);
+  save();
+  renderSavedSearches();
+  toast('Búsqueda eliminada');
+}
+
+// ─────────────────────────────────────────────
+// ETIQUETAS
+// ─────────────────────────────────────────────
+function initColorGrid() {
+  const el = document.getElementById('colorGrid');
+  el.innerHTML = COLORS.map(c =>
+    `<div class="color-dot ${c === selectedColor ? 'selected' : ''}"
+      style="background:${c}"
+      onclick="selectColor('${c}')"></div>`
+  ).join('');
+}
+
+function selectColor(c) {
+  selectedColor = c;
+  initColorGrid();
+}
+
+function createTag() {
+  const name = document.getElementById('newTagName').value.trim();
+  if (!name) { toast('Ingresá un nombre', true); return; }
+  if (state.tags.find(t => t.name.toLowerCase() === name.toLowerCase())) {
+    toast('Ya existe esa etiqueta', true); return;
+  }
+  state.tags.push({ id: Date.now().toString(), name, color: selectedColor });
+  document.getElementById('newTagName').value = '';
+  save();
+  renderTagLibrary();
+  renderSearchTagGrid();
+  toast('Etiqueta creada ✓');
+}
+
+function renderTagLibrary() {
+  const el = document.getElementById('tagLibrary');
+  if (!state.tags.length) {
+    el.innerHTML = `<div class="empty"><div class="empty-icon">🏷️</div><div class="empty-text">No hay etiquetas aún</div></div>`;
+    return;
+  }
+  el.innerHTML = state.tags.map(tag => `
+    <div style="display:flex;align-items:center;justify-content:space-between;padding:8px;border-radius:8px;border:1px solid var(--border);margin-bottom:6px;background:var(--surface2);">
+      <span class="tag" style="background:${tag.color}22;color:${tag.color};border:1px solid ${tag.color}44">${tag.name}</span>
+      <button class="btn btn-danger btn-sm" onclick="deleteTag('${tag.id}')">✕</button>
+    </div>`
+  ).join('');
+}
+
+function deleteTag(id) {
+  state.tags = state.tags.filter(t => t.id !== id);
+  // Limpiar de folderData
+  Object.keys(state.folderData).forEach(fid => {
+    state.folderData[fid].tags = state.folderData[fid].tags.filter(t => t !== id);
+  });
+  save();
+  renderTagLibrary();
+  renderFolders();
+  renderSearchTagGrid();
+  toast('Etiqueta eliminada');
+}
+
+// ─────────────────────────────────────────────
+// UI HELPERS
+// ─────────────────────────────────────────────
+function switchTab(name) {
+  document.querySelectorAll('.tab').forEach((t, i) => {
+    const names = ['carpetas','buscar','etiquetas','guardadas'];
+    t.classList.toggle('active', names[i] === name);
+  });
+  document.querySelectorAll('.panel').forEach(p => {
+    p.classList.toggle('active', p.id === 'panel-' + name);
+  });
+  if (name === 'guardadas') renderSavedSearches();
+  if (name === 'etiquetas') renderTagLibrary();
+  if (name === 'buscar') renderSearchTagGrid();
+}
+
+function closeModal(id) {
+  document.getElementById(id).classList.remove('open');
+}
+
+let toastTimer;
+function toast(msg, isError = false) {
+  const el = document.getElementById('toast');
+  el.textContent = isError ? '⚠️ ' + msg : '✓ ' + msg;
+  el.className = 'show' + (isError ? ' error' : '');
+  clearTimeout(toastTimer);
+  toastTimer = setTimeout(() => el.className = '', 2500);
+}
+
+// ─────────────────────────────────────────────
+// INIT
+// ─────────────────────────────────────────────
+window.onload = () => {
+  load();
+  initColorGrid();
+  renderTagLibrary();
+  renderSavedSearches();
+
+  const savedClientId = localStorage.getItem('dt_client_id');
+  if (!savedClientId) return; // Sin Client ID, mostrar pantalla de conexión
+
+  // Inyectar GAPI
+  const s1 = document.createElement('script');
+  s1.src = 'https://apis.google.com/js/api.js';
+  s1.onload = () => gapi.load('client', async () => {
+    await initGapi();
+    // Intentar restaurar sesión guardada
+    const restored = await tryRestoreSession();
+    if (restored) {
+      updateAuthUI(true);
+      await loadFolders();
+    }
+  });
+  document.head.appendChild(s1);
+
+  // Inyectar GIS
+  const s2 = document.createElement('script');
+  s2.src = 'https://accounts.google.com/gsi/client';
+  s2.onload = () => {
+    tokenClient = google.accounts.oauth2.initTokenClient({
+      client_id: savedClientId,
+      scope: SCOPES,
+      callback: async (resp) => {
+        if (resp.error) { toast('Error de autenticación', true); return; }
+        // Guardar token con tiempo de expiración (1 hora - 60s de margen)
+        const expiresAt = Date.now() + (resp.expires_in - 60) * 1000;
+        localStorage.setItem('dt_token', JSON.stringify({
+          access_token: resp.access_token,
+          expires_at: expiresAt,
+        }));
+        isSignedIn = true;
+        updateAuthUI(true);
+        await loadFolders();
+      },
+    });
+
+    document.getElementById('btnAuth').onclick = handleAuth;
+
+    // Si no se restauró sesión, pedir login silencioso
+    // (solo si no hay token guardado)
+    if (!localStorage.getItem('dt_token')) {
+      // No hacemos nada — el usuario toca "Conectar" manualmente
+    }
+  };
+  document.head.appendChild(s2);
+};
+</script>
+</body>
+</html>
