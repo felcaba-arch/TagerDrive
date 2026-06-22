@@ -1,0 +1,1795 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0">
+<title>Drive Tagger</title>
+<style>
+html { height: 100%; overflow: hidden; }
+:root {
+  --ol-bg: #1e1e2e;
+  --ol-sidebar: #16213e;
+  --ol-sidebar2: #0f3460;
+  --ol-header: #0d1117;
+  --ol-border: #2d3561;
+  --ol-accent: #4361ee;
+  --ol-accent2: #3a0ca3;
+  --ol-selected: #4361ee22;
+  --ol-hover: #4361ee11;
+  --ol-text: #e2e8f0;
+  --ol-muted: #718096;
+  --ol-green: #38a169;
+  --ol-red: #e53e3e;
+  --ol-yellow: #d69e2e;
+  --ol-tag1: #4361ee;
+  --ol-tag2: #7209b7;
+  --ol-tag3: #38a169;
+  --ol-tag4: #d69e2e;
+  --sidebar-w: 220px;
+}
+
+* { box-sizing: border-box; margin: 0; padding: 0; }
+
+body {
+  font-family: 'Segoe UI', system-ui, -apple-system, sans-serif;
+  background: var(--ol-bg);
+  color: var(--ol-text);
+  height: 100vh;
+  max-height: 100vh;
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+  font-size: 13px;
+}
+
+/* ── TITLEBAR ── */
+#titlebar {
+  background: var(--ol-header);
+  border-bottom: 1px solid var(--ol-border);
+  padding: 8px 14px;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  flex-shrink: 0;
+  z-index: 200;
+}
+.logo { font-size: 15px; font-weight: 700; letter-spacing: -0.3px; color: var(--ol-text); }
+.logo span { color: var(--ol-accent); }
+.auth-zone { display: flex; align-items: center; gap: 10px; }
+#authStatus { font-size: 11px; color: var(--ol-muted); }
+#btnAuth {
+  background: var(--ol-accent);
+  color: #fff;
+  border: none;
+  border-radius: 5px;
+  padding: 5px 12px;
+  font-size: 12px;
+  font-weight: 600;
+  cursor: pointer;
+}
+#btnAuth:hover { opacity: 0.88; }
+
+/* ── TOOLBAR ── */
+#toolbar {
+  background: var(--ol-header);
+  border-bottom: 1px solid var(--ol-border);
+  padding: 5px 10px;
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  flex-shrink: 0;
+}
+.tool-btn {
+  background: none;
+  border: 1px solid transparent;
+  border-radius: 4px;
+  color: var(--ol-text);
+  padding: 4px 10px;
+  font-size: 12px;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  white-space: nowrap;
+}
+.tool-btn:hover { background: var(--ol-hover); border-color: var(--ol-border); }
+.tool-btn.active { background: var(--ol-selected); border-color: var(--ol-accent); color: var(--ol-accent); }
+.tool-sep { width: 1px; height: 20px; background: var(--ol-border); margin: 0 2px; }
+
+/* ── LAYOUT ── */
+#app-layout {
+  display: flex;
+  flex: 1;
+  overflow: hidden;
+  min-height: 0;
+  height: 100%;
+}
+
+/* ── SIDEBAR (Outlook folder pane) ── */
+#sidebar {
+  width: var(--sidebar-w);
+  background: var(--ol-sidebar);
+  border-right: 1px solid var(--ol-border);
+  display: flex;
+  flex-direction: column;
+  overflow-y: auto;
+  overflow-x: hidden;
+  flex-shrink: 0;
+  transition: width 0.2s;
+  -webkit-overflow-scrolling: touch;
+}
+#sidebar.collapsed { width: 0; overflow: hidden; }
+
+.sidebar-section { flex-shrink: 0; }
+
+.sidebar-group-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 6px 10px;
+  font-size: 11px;
+  font-weight: 700;
+  color: var(--ol-muted);
+  text-transform: uppercase;
+  letter-spacing: 0.6px;
+  cursor: pointer;
+  user-select: none;
+  border-bottom: 1px solid var(--ol-border);
+}
+.sidebar-group-header:hover { background: var(--ol-hover); }
+.sidebar-chevron { font-size: 9px; transition: transform 0.2s; }
+.sidebar-chevron.open { transform: rotate(90deg); }
+
+.sidebar-items { overflow: hidden; }
+.sidebar-items.collapsed { display: none; }
+
+.sidebar-item {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  padding: 5px 10px 5px 16px;
+  cursor: pointer;
+  font-size: 12px;
+  color: var(--ol-text);
+  border-left: 2px solid transparent;
+  transition: all 0.1s;
+  white-space: nowrap;
+  overflow: hidden;
+}
+.sidebar-item:hover { background: var(--ol-hover); }
+.sidebar-item.active {
+  background: var(--ol-selected);
+  border-left-color: var(--ol-accent);
+  color: var(--ol-accent);
+  font-weight: 600;
+}
+.sidebar-item .si-icon { font-size: 13px; flex-shrink: 0; }
+.sidebar-item .si-label { overflow: hidden; text-overflow: ellipsis; flex: 1; }
+.sidebar-item .si-count {
+  font-size: 10px;
+  background: var(--ol-accent);
+  color: #fff;
+  border-radius: 8px;
+  padding: 1px 5px;
+  flex-shrink: 0;
+}
+.sidebar-item .si-delete {
+  font-size: 10px;
+  color: var(--ol-muted);
+  padding: 2px 4px;
+  border-radius: 3px;
+  display: none;
+  flex-shrink: 0;
+}
+.sidebar-item:hover .si-delete { display: block; }
+.sidebar-item .si-delete:hover { color: var(--ol-red); background: #e53e3e22; }
+
+/* ── CONTENT AREA ── */
+#content {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+}
+
+/* Content header (like Outlook's reading pane header) */
+#content-header {
+  background: var(--ol-header);
+  border-bottom: 1px solid var(--ol-border);
+  padding: 8px 14px;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  flex-shrink: 0;
+}
+#content-title {
+  font-size: 14px;
+  font-weight: 600;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+#content-subtitle { font-size: 11px; color: var(--ol-muted); margin-top: 1px; }
+
+/* Search bar in content header */
+#content-search {
+  background: var(--ol-sidebar);
+  border: 1px solid var(--ol-border);
+  border-radius: 5px;
+  color: var(--ol-text);
+  padding: 5px 10px;
+  font-size: 12px;
+  width: 180px;
+  outline: none;
+}
+#content-search:focus { border-color: var(--ol-accent); }
+
+/* ── PANELS ── */
+.view { display: none; flex: 1; overflow: hidden; flex-direction: column; min-height: 0; }
+.view.active { display: flex; }
+
+/* ── FOLDER LIST (like email list) ── */
+#folderListView {
+  padding: 8px;
+  overflow-y: auto;
+  flex: 1;
+  min-height: 0;
+  -webkit-overflow-scrolling: touch;
+}
+.folder-row {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 7px 10px;
+  border-radius: 5px;
+  cursor: pointer;
+  border: 1px solid transparent;
+  margin-bottom: 2px;
+  transition: all 0.1s;
+}
+.folder-row:hover { background: var(--ol-hover); border-color: var(--ol-border); }
+.folder-row.selected { background: var(--ol-selected); border-color: var(--ol-accent); }
+.folder-row-icon { font-size: 16px; flex-shrink: 0; }
+.folder-row-info { flex: 1; min-width: 0; }
+.folder-row-name { font-size: 13px; font-weight: 500; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.folder-row-tags { display: flex; flex-wrap: wrap; gap: 3px; margin-top: 3px; }
+.folder-row-note { font-size: 11px; color: var(--ol-muted); margin-top: 2px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+
+/* ── TAGS ── */
+.tag-chip {
+  display: inline-flex;
+  align-items: center;
+  gap: 3px;
+  padding: 1px 6px;
+  border-radius: 10px;
+  font-size: 10px;
+  font-weight: 600;
+}
+.tag-chip .rm { cursor: pointer; opacity: 0.6; font-size: 9px; }
+.tag-chip .rm:hover { opacity: 1; }
+
+.tag-pill-lg {
+  padding: 8px 18px;
+  border-radius: 20px;
+  font-size: 16px;
+  font-weight: 600;
+  cursor: pointer;
+  border: 2px solid transparent;
+  transition: all 0.12s;
+  min-height: 40px;
+  display: inline-flex;
+  align-items: center;
+}
+.tag-pill-lg:hover { opacity: 0.85; transform: scale(1.04); }
+.tag-pill-lg.sel { border-color: #fff; }
+
+/* ── SEARCH VIEW ── */
+#searchView { padding: 12px; gap: 10px; }
+.search-card {
+  background: var(--ol-sidebar);
+  border: 1px solid var(--ol-border);
+  border-radius: 8px;
+  padding: 12px;
+}
+.search-card-title { font-size: 11px; font-weight: 700; color: var(--ol-muted); text-transform: uppercase; letter-spacing: 0.5px; margin-bottom: 8px; }
+
+.logic-toggle {
+  display: flex;
+  border: 1px solid var(--ol-border);
+  border-radius: 5px;
+  overflow: hidden;
+  width: fit-content;
+}
+.logic-btn {
+  padding: 4px 12px;
+  font-size: 11px;
+  font-weight: 700;
+  cursor: pointer;
+  border: none;
+  background: var(--ol-sidebar);
+  color: var(--ol-muted);
+}
+.logic-btn.active { background: var(--ol-accent); color: #fff; }
+
+/* ── TAGS VIEW ── */
+#tagsView { padding: 12px; gap: 10px; }
+
+/* ── SETTINGS VIEW ── */
+#settingsView { padding: 12px; gap: 10px; }
+
+/* ── DETAIL PANEL (right side, like reading pane) ── */
+#detailPanel {
+  width: 280px;
+  background: var(--ol-sidebar);
+  border-left: 1px solid var(--ol-border);
+  display: none;
+  flex-direction: column;
+  flex-shrink: 0;
+  height: 100%;
+  overflow: hidden;
+}
+#detailPanel.open { display: flex; }
+#detailHeader {
+  padding: 12px 14px;
+  border-bottom: 1px solid var(--ol-border);
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  flex-shrink: 0;
+}
+#detailTitle { font-size: 14px; font-weight: 700; }
+#detailClose {
+  background: none; border: none; color: var(--ol-muted);
+  font-size: 16px; cursor: pointer; padding: 2px 6px; border-radius: 4px;
+}
+#detailClose:hover { background: var(--ol-hover); }
+#detailBody {
+  padding: 12px 14px;
+  flex: 1;
+  overflow-y: scroll;
+  min-height: 0;
+  -webkit-overflow-scrolling: touch;
+  overscroll-behavior: contain;
+}
+label.det-label { font-size: 11px; color: var(--ol-muted); display: block; margin-bottom: 4px; margin-top: 12px; }
+label.det-label:first-child { margin-top: 0; }
+#detailNote {
+  width: 100%; background: var(--ol-bg); border: 1px solid var(--ol-border);
+  border-radius: 5px; color: var(--ol-text); padding: 7px 9px;
+  font-size: 12px; font-family: inherit; resize: vertical; min-height: 80px; outline: none;
+}
+#detailNote:focus { border-color: var(--ol-accent); }
+#detailTagPicker { display: flex; flex-wrap: wrap; gap: 5px; margin-top: 6px; }
+#detailCurrentTags { display: flex; flex-wrap: wrap; gap: 5px; margin-top: 6px; min-height: 22px; }
+#detailActions {
+  padding: 10px 14px;
+  border-top: 1px solid var(--ol-border);
+  display: flex;
+  gap: 6px;
+  flex-shrink: 0;
+}
+
+/* ── EMPTY ── */
+.empty-state { display: flex; flex-direction: column; align-items: center; justify-content: center; padding: 40px 20px; color: var(--ol-muted); text-align: center; flex: 1; }
+.empty-state .ei { font-size: 36px; margin-bottom: 10px; }
+.empty-state .et { font-size: 13px; }
+
+/* ── BUTTONS ── */
+.btn { border: none; border-radius: 5px; padding: 6px 12px; font-size: 12px; font-weight: 600; cursor: pointer; transition: opacity 0.12s; }
+.btn:hover { opacity: 0.85; }
+.btn-primary { background: var(--ol-accent); color: #fff; }
+.btn-secondary { background: var(--ol-sidebar2); color: var(--ol-text); border: 1px solid var(--ol-border); }
+.btn-danger { background: var(--ol-red); color: #fff; }
+.btn-success { background: var(--ol-green); color: #fff; }
+.btn-sm { padding: 3px 8px; font-size: 11px; }
+.btn-row { display: flex; gap: 6px; flex-wrap: wrap; margin-top: 10px; }
+
+/* ── FORM ── */
+input[type=text], textarea {
+  width: 100%; background: var(--ol-bg); border: 1px solid var(--ol-border);
+  border-radius: 5px; color: var(--ol-text); padding: 7px 9px;
+  font-size: 13px; outline: none; font-family: inherit;
+}
+input[type=text]:focus, textarea:focus { border-color: var(--ol-accent); }
+.form-label { font-size: 11px; color: var(--ol-muted); display: block; margin-bottom: 4px; margin-top: 10px; }
+.form-label:first-child { margin-top: 0; }
+
+.section-card {
+  background: var(--ol-sidebar);
+  border: 1px solid var(--ol-border);
+  border-radius: 8px;
+  padding: 14px;
+  margin-bottom: 10px;
+}
+.section-title { font-size: 11px; font-weight: 700; color: var(--ol-muted); text-transform: uppercase; letter-spacing: 0.5px; margin-bottom: 10px; }
+
+/* ── COLOR DOTS ── */
+.color-grid { display: flex; gap: 7px; flex-wrap: wrap; margin-top: 6px; }
+.color-dot { width: 24px; height: 24px; border-radius: 50%; cursor: pointer; border: 2px solid transparent; transition: transform 0.1s; }
+.color-dot:hover { transform: scale(1.18); }
+.color-dot.selected { border-color: #fff; transform: scale(1.18); }
+
+/* ── CONNECT SCREEN ── */
+#connectScreen {
+  display: flex; flex-direction: column; align-items: center; justify-content: center;
+  flex: 1; text-align: center; padding: 30px;
+}
+#connectScreen .big-icon { font-size: 56px; margin-bottom: 14px; }
+#connectScreen h2 { font-size: 20px; font-weight: 700; margin-bottom: 8px; }
+#connectScreen p { color: var(--ol-muted); font-size: 13px; margin-bottom: 20px; line-height: 1.6; max-width: 320px; }
+
+/* ── TOAST ── */
+#toast {
+  position: fixed; bottom: 16px; left: 50%; transform: translateX(-50%) translateY(60px);
+  background: var(--ol-green); color: #fff; padding: 8px 18px; border-radius: 16px;
+  font-size: 12px; font-weight: 600; transition: transform 0.25s; z-index: 500; white-space: nowrap;
+}
+#toast.show { transform: translateX(-50%) translateY(0); }
+#toast.error { background: var(--ol-red); }
+
+/* ── SIDEBAR TOGGLE BUTTON (mobile) ── */
+#sidebarToggle {
+  background: none; border: none; color: var(--ol-text);
+  font-size: 16px; cursor: pointer; padding: 4px 8px;
+  border-radius: 4px;
+}
+#sidebarToggle:hover { background: var(--ol-hover); }
+
+/* ── SCROLLBAR ── */
+::-webkit-scrollbar { width: 4px; height: 4px; }
+::-webkit-scrollbar-track { background: transparent; }
+::-webkit-scrollbar-thumb { background: var(--ol-border); border-radius: 4px; }
+
+/* ── RESULT COUNT ── */
+.result-count { font-size: 11px; color: var(--ol-muted); padding: 4px 8px; }
+
+/* ── SAVED SEARCH ROW ── */
+.ss-row {
+  display: flex; align-items: center; gap: 6px;
+  padding: 5px 10px 5px 16px; cursor: pointer; font-size: 12px;
+  color: var(--ol-text); border-left: 2px solid transparent;
+  transition: all 0.1s; white-space: nowrap; overflow: hidden;
+}
+.ss-row:hover { background: var(--ol-hover); }
+.ss-row.active { background: var(--ol-selected); border-left-color: var(--ol-accent); color: var(--ol-accent); font-weight: 600; }
+.ss-row .ss-label { flex: 1; overflow: hidden; text-overflow: ellipsis; }
+.ss-row .ss-del { font-size: 10px; color: var(--ol-muted); padding: 1px 4px; border-radius: 3px; display: none; }
+.ss-row:hover .ss-del { display: block; }
+.ss-row .ss-del:hover { color: var(--ol-red); background: #e53e3e22; }
+
+/* ── TAG LIB ROW ── */
+.tag-lib-row {
+  display: flex; align-items: center; justify-content: space-between;
+  padding: 6px 8px; border-radius: 5px; border: 1px solid var(--ol-border);
+  margin-bottom: 5px; background: var(--ol-bg);
+}
+
+/* ── ÁRBOL DE ETIQUETAS ── */
+.tag-tree-node { margin-bottom: 6px; }
+.tag-tree-header {
+  display: flex; align-items: center; gap: 8px;
+  padding: 10px 12px; border-radius: 8px;
+  border: 1px solid var(--ol-border); background: var(--ol-bg);
+  cursor: grab; transition: background 0.1s;
+  touch-action: none;
+}
+.tag-tree-header:hover { background: var(--ol-hover); }
+.tag-tree-header.dragging { opacity: 0.4; border-style: dashed; cursor: grabbing; }
+.tag-tree-header.drag-over { border-color: var(--ol-accent); background: var(--ol-selected); }
+.tag-tree-toggle {
+  font-size: 11px; color: var(--ol-muted); width: 14px; flex-shrink: 0;
+  transition: transform 0.15s; cursor: pointer;
+}
+.tag-tree-toggle.open { transform: rotate(90deg); }
+.tag-tree-chip {
+  display: inline-flex; align-items: center; gap: 6px;
+  padding: 4px 14px; border-radius: 14px; font-size: 15px; font-weight: 700; flex: 1;
+}
+.tag-tree-handle { font-size: 14px; color: var(--ol-muted); cursor: grab; flex-shrink: 0; user-select: none; }
+.tag-tree-actions { display: flex; gap: 6px; opacity: 0; transition: opacity 0.1s; }
+.tag-tree-header:hover .tag-tree-actions { opacity: 1; }
+.tag-tree-btn {
+  background: none; border: none; cursor: pointer;
+  font-size: 14px; padding: 4px 8px; border-radius: 5px; color: var(--ol-muted);
+}
+.tag-tree-btn:hover { background: var(--ol-hover); color: var(--ol-text); }
+.tag-tree-btn.del:hover { color: var(--ol-red); background: #e53e3e22; }
+.tag-tree-children {
+  padding-left: 22px; border-left: 1px dashed var(--ol-border);
+  margin-left: 18px; margin-top: 4px;
+}
+.tag-tree-children.hidden { display: none; }
+
+/* ── CREAR ETIQUETA INLINE (desde carpetas) ── */
+.quick-tag-form {
+  background: var(--ol-sidebar); border: 1px solid var(--ol-border);
+  border-radius: 8px; padding: 12px; margin-top: 10px;
+}
+.quick-tag-form input[type=text] { font-size: 12px; padding: 5px 8px; }
+.quick-color-grid { display: flex; gap: 5px; flex-wrap: wrap; margin-top: 5px; }
+.quick-color-dot { width: 20px; height: 20px; border-radius: 50%; cursor: pointer; border: 2px solid transparent; }
+.quick-color-dot:hover { transform: scale(1.15); }
+.quick-color-dot.selected { border-color: #fff; }
+
+/* ── SELECTOR DE PADRE ── */
+.parent-select {
+  width: 100%; background: var(--ol-bg); border: 1px solid var(--ol-border);
+  border-radius: 5px; color: var(--ol-text); padding: 5px 8px;
+  font-size: 12px; outline: none; font-family: inherit; margin-top: 4px;
+}
+.parent-select:focus { border-color: var(--ol-accent); }
+
+/* Responsive: en mobile esconder detail panel por defecto */
+/* ── RESPONSIVE ── */
+
+/* Tablet y desktop: 3 columnas lado a lado (>= 900px) */
+@media (min-width: 900px) {
+  #detailPanel {
+    width: 300px;
+    position: relative;
+  }
+}
+
+/* Móvil y tablet chica (< 900px): overlay sobre todo */
+@media (max-width: 899px) {
+  #detailPanel {
+    width: 85%;
+    max-width: 420px;
+    position: fixed;
+    top: 0;
+    right: 0;
+    bottom: 0;
+    z-index: 300;
+    border-left: 2px solid var(--ol-accent);
+    box-shadow: -4px 0 24px rgba(0,0,0,0.5);
+  }
+  #detailPanel.open { display: flex; }
+  /* Overlay oscuro detrás del panel */
+  #detailOverlay {
+    display: none;
+    position: fixed;
+    inset: 0;
+    background: rgba(0,0,0,0.5);
+    z-index: 299;
+  }
+  #detailOverlay.open { display: block; }
+  .sidebar-item .si-label { max-width: 130px; }
+}
+</style>
+</head>
+<body>
+
+<!-- TITLEBAR -->
+<div id="titlebar">
+  <div style="display:flex;align-items:center;gap:8px;">
+    <button id="sidebarToggle" onclick="toggleSidebar()" title="Panel de carpetas">☰</button>
+    <div class="logo">Drive<span>Tagger</span></div>
+  </div>
+  <div class="auth-zone">
+    <span id="authStatus">No conectado</span>
+    <button id="btnAuth" onclick="handleAuth()">🔗 Conectar</button>
+  </div>
+</div>
+
+<!-- TOOLBAR -->
+<div id="toolbar" style="display:none">
+  <button class="tool-btn active" id="tb-carpetas" onclick="switchView('carpetas')">📁 Carpetas</button>
+  <div class="tool-sep"></div>
+  <button class="tool-btn" id="tb-etiquetas" onclick="switchView('etiquetas')">🏷️ Etiquetas</button>
+  <div class="tool-sep"></div>
+  <button class="tool-btn" id="tb-config" onclick="switchView('config')">⚙️ Config</button>
+  <div class="tool-sep"></div>
+  <button class="tool-btn" id="tb-save" onclick="quickSaveDetail()" style="display:none;">💾 Guardar</button>
+  <div style="flex:1"></div>
+  <input type="text" id="content-search" placeholder="🔎 Buscar carpeta..." oninput="filterFolderList()" style="display:none">
+</div>
+
+<!-- CONNECT SCREEN -->
+<div id="connectScreen">
+  <div class="big-icon">🗂️</div>
+  <h2>Drive Tagger</h2>
+  <p>Etiquetá tus carpetas de Google Drive con tags propios. Buscá por combinaciones y guardá carpetas de búsqueda como en Outlook.</p>
+  <button class="btn btn-primary" style="font-size:14px;padding:10px 24px;" onclick="handleAuth()">
+    🔗 Conectar con Google Drive
+  </button>
+  <p style="margin-top:14px;font-size:11px;color:var(--ol-muted);">Los tags se guardan localmente. Nunca se modifican tus archivos.</p>
+</div>
+
+<!-- APP LAYOUT -->
+<div id="app-layout" style="display:none">
+
+  <!-- SIDEBAR (Outlook folder pane) -->
+  <div id="sidebar">
+
+    <!-- Mis Carpetas -->
+    <div class="sidebar-section">
+      <div class="sidebar-group-header" onclick="toggleGroup('grp-carpetas')">
+        <span>📁 Mis carpetas</span>
+        <span class="sidebar-chevron open" id="chv-carpetas">▶</span>
+      </div>
+      <div class="sidebar-items" id="grp-carpetas">
+        <div class="sidebar-item active" id="si-todas" onclick="showAllFolders()">
+          <span class="si-icon">🗂️</span>
+          <span class="si-label">Todas</span>
+          <span class="si-count" id="count-todas">0</span>
+        </div>
+        <div class="sidebar-item" id="si-etiquetadas" onclick="showTaggedFolders()">
+          <span class="si-icon">🏷️</span>
+          <span class="si-label">Etiquetadas</span>
+          <span class="si-count" id="count-etiquetadas">0</span>
+        </div>
+        <div class="sidebar-item" id="si-sin" onclick="showUntaggedFolders()">
+          <span class="si-icon">📂</span>
+          <span class="si-label">Sin etiqueta</span>
+          <span class="si-count" id="count-sin">0</span>
+        </div>
+      </div>
+    </div>
+
+    <!-- Carpetas de búsqueda (como Outlook) -->
+    <div class="sidebar-section">
+      <div class="sidebar-group-header" onclick="toggleGroup('grp-busquedas')">
+        <span>🔍 Carpetas de búsqueda</span>
+        <span class="sidebar-chevron open" id="chv-busquedas">▶</span>
+      </div>
+      <div class="sidebar-items" id="grp-busquedas">
+        <div id="savedSearchSidebar">
+          <div style="padding:8px 16px;font-size:11px;color:var(--ol-muted);">Sin carpetas de búsqueda</div>
+        </div>
+        <div class="sidebar-item" onclick="switchView('nueva-busqueda')" style="color:var(--ol-accent);">
+          <span class="si-icon">＋</span>
+          <span class="si-label">Nueva carpeta...</span>
+        </div>
+      </div>
+    </div>
+
+    <!-- Etiquetas rápidas -->
+    <div class="sidebar-section">
+      <div class="sidebar-group-header" onclick="toggleGroup('grp-tags')">
+        <span>🏷️ Filtrar por etiqueta</span>
+        <span class="sidebar-chevron open" id="chv-tags">▶</span>
+      </div>
+      <div class="sidebar-items" id="grp-tags">
+        <div id="tagsSidebar">
+          <div style="padding:8px 16px;font-size:11px;color:var(--ol-muted);">Sin etiquetas</div>
+        </div>
+      </div>
+    </div>
+
+  </div><!-- /sidebar -->
+
+  <!-- CONTENT -->
+  <div id="content">
+
+    <!-- Content header -->
+    <div id="content-header">
+      <div>
+        <div id="content-title">🗂️ Todas las carpetas</div>
+        <div id="content-subtitle">Cargando...</div>
+      </div>
+      <input type="text" id="folder-search" placeholder="🔎 Filtrar..." oninput="filterFolderList()" style="width:140px;font-size:12px;padding:5px 8px;">
+    </div>
+
+    <!-- VIEW: Carpetas -->
+    <div class="view active" id="view-carpetas">
+      <div id="folderListView">
+        <div class="empty-state"><div class="ei">📂</div><div class="et">Cargando carpetas...</div></div>
+      </div>
+    </div>
+
+    <!-- VIEW: Nueva búsqueda / Buscar -->
+    <div class="view" id="view-nueva-busqueda" style="padding:12px;gap:10px;">
+      <div class="section-card">
+        <div class="section-title">Nueva carpeta de búsqueda</div>
+        <span class="form-label">Nombre</span>
+        <input type="text" id="newSearchName" placeholder="Ej: Campañas activas de Claro...">
+
+        <span class="form-label">Lógica</span>
+        <div class="logic-toggle">
+          <button class="logic-btn active" id="logicAnd" onclick="setLogic('AND')">Y — todas</button>
+          <button class="logic-btn" id="logicOr" onclick="setLogic('OR')">O — alguna</button>
+        </div>
+
+        <span class="form-label">Etiquetas</span>
+        <div id="newSearchTagGrid" style="display:flex;flex-wrap:wrap;gap:6px;margin-top:6px;"></div>
+
+        <div class="btn-row">
+          <button class="btn btn-primary" onclick="createSearchFolder()">+ Crear carpeta de búsqueda</button>
+          <button class="btn btn-secondary" onclick="switchView('carpetas')">Cancelar</button>
+        </div>
+      </div>
+    </div>
+
+    <!-- VIEW: Resultado carpeta de búsqueda -->
+    <div class="view" id="view-search-result">
+      <div id="searchResultList" style="padding:8px;"></div>
+    </div>
+
+    <!-- VIEW: Etiquetas -->
+    <div class="view" id="view-etiquetas" style="padding:12px;gap:10px;overflow-y:auto;">
+      <div class="section-card">
+        <div class="section-title">Crear etiqueta</div>
+        <span class="form-label">Nombre</span>
+        <input type="text" id="newTagName" placeholder="Ej: Claro, Meta Ads, Urgente...">
+        <span class="form-label">Etiqueta padre (opcional)</span>
+        <select class="parent-select" id="newTagParent">
+          <option value="">— Ninguna (etiqueta raíz) —</option>
+        </select>
+        <span class="form-label">Color</span>
+        <div class="color-grid" id="colorGrid"></div>
+        <div class="btn-row">
+          <button class="btn btn-primary" onclick="createTag()">+ Crear</button>
+        </div>
+      </div>
+      <div class="section-card">
+        <div class="section-title">Mis etiquetas</div>
+        <div id="tagLibrary"></div>
+      </div>
+    </div>
+
+    <!-- VIEW: Config / Backup -->
+    <div class="view" id="view-config" style="padding:12px;gap:10px;">
+      <div class="section-card">
+        <div class="section-title">💾 Copia de seguridad</div>
+        <p style="font-size:12px;color:var(--ol-muted);margin-bottom:10px;line-height:1.6;">
+          Exportá etiquetas, carpetas etiquetadas y carpetas de búsqueda como JSON.
+          Importalo para restaurar si borrás el caché.
+        </p>
+        <div class="btn-row">
+          <button class="btn btn-primary" onclick="exportBackup()">⬇️ Exportar</button>
+          <button class="btn btn-secondary" onclick="document.getElementById('importFile').click()">⬆️ Importar</button>
+          <input type="file" id="importFile" accept=".json" style="display:none" onchange="importBackup(event)">
+        </div>
+        <div id="backupInfo" style="margin-top:10px;font-size:11px;color:var(--ol-muted);"></div>
+      </div>
+      <div class="section-card">
+        <div class="section-title">🔑 Cuenta</div>
+        <p style="font-size:12px;color:var(--ol-muted);margin-bottom:10px;">
+          Conectado como: <strong style="color:var(--ol-text)" id="configEmail">—</strong>
+        </p>
+        <button class="btn btn-secondary btn-sm" onclick="handleAuth()">Desconectar</button>
+      </div>
+    </div>
+
+  </div><!-- /content -->
+
+  <!-- DETAIL PANEL (reading pane) -->
+  <div id="detailPanel">
+    <div id="detailHeader">
+      <div id="detailTitle">📁 Carpeta</div>
+      <button id="detailClose" onclick="closeDetail()">✕</button>
+    </div>
+    <div id="detailBody">
+      <label class="det-label">Etiquetas actuales</label>
+      <div id="detailCurrentTags"></div>
+
+      <label class="det-label">Agregar etiqueta</label>
+      <div id="detailTagPicker"></div>
+      <button class="btn btn-secondary btn-sm" style="margin-top:8px;width:100%;" onclick="toggleQuickTagForm()">＋ Nueva etiqueta</button>
+      <div class="quick-tag-form" id="quickTagForm" style="display:none;">
+        <span style="font-size:11px;color:var(--ol-muted);display:block;margin-bottom:4px;">Nombre</span>
+        <input type="text" id="quickTagName" placeholder="Nombre de la etiqueta..." style="font-size:12px;padding:5px 8px;">
+        <span style="font-size:11px;color:var(--ol-muted);display:block;margin:6px 0 4px;">Padre (opcional)</span>
+        <select class="parent-select" id="quickTagParent" style="font-size:12px;">
+          <option value="">— Raíz —</option>
+        </select>
+        <span style="font-size:11px;color:var(--ol-muted);display:block;margin:6px 0 4px;">Color</span>
+        <div class="quick-color-grid" id="quickColorGrid"></div>
+        <div style="display:flex;gap:6px;margin-top:8px;">
+          <button class="btn btn-primary btn-sm" onclick="createTagQuick()">Crear</button>
+          <button class="btn btn-secondary btn-sm" onclick="toggleQuickTagForm()">Cancelar</button>
+        </div>
+      </div>
+
+      <label class="det-label" style="margin-top:14px;">Nota</label>
+      <textarea id="detailNote" rows="4" placeholder="Notas sobre esta carpeta..."></textarea>
+    </div>
+    <div id="detailActions">
+      <button class="btn btn-success" onclick="saveDetail()">💾 Guardar</button>
+      <button class="btn btn-secondary" onclick="openInDrive()">📂 Abrir</button>
+      <button class="btn btn-secondary" onclick="closeDetail()">✕</button>
+    </div>
+  </div>
+
+</div><!-- /app-layout -->
+
+<!-- TOAST -->
+<div id="toast"></div>
+
+<!-- OVERLAY para detail panel en móvil -->
+<div id="detailOverlay" onclick="closeDetail()"></div>
+
+<!-- MODAL: Confirmar borrado etiqueta -->
+<div id="modalConfirmDelete" style="display:none;position:fixed;inset:0;background:rgba(0,0,0,0.7);z-index:600;align-items:center;justify-content:center;">
+  <div style="background:var(--ol-sidebar);border:1px solid var(--ol-border);border-radius:12px;padding:20px;width:90%;max-width:340px;">
+    <div style="font-size:16px;font-weight:700;margin-bottom:8px;">⚠️ Borrar etiqueta</div>
+    <p id="confirmDeleteMsg" style="font-size:13px;color:var(--ol-muted);margin-bottom:16px;line-height:1.5;"></p>
+    <div style="display:flex;gap:8px;justify-content:flex-end;">
+      <button class="btn btn-secondary" onclick="closeConfirmDelete()">Cancelar</button>
+      <button class="btn btn-danger" id="btnConfirmDelete" onclick="confirmDeleteTag()">🗑️ Borrar</button>
+    </div>
+  </div>
+</div>
+
+<script>
+// ─────────────────────────────────────
+// CONFIG
+// ─────────────────────────────────────
+const SCOPES = 'https://www.googleapis.com/auth/drive.metadata.readonly https://www.googleapis.com/auth/userinfo.email';
+const DISCOVERY_DOC = 'https://www.googleapis.com/discovery/v1/apis/drive/v3/rest';
+const COLORS = ['#4361ee','#7209b7','#38a169','#d69e2e','#e53e3e','#e91e8c','#0bc5ea','#ed8936'];
+
+let gapiReady = false;
+let tokenClient = null;
+let isSignedIn = false;
+let selectedColor = COLORS[0];
+let currentSearchId = null;
+let currentFolderMode = 'all'; // all | tagged | untagged | tag:id
+
+let state = {
+  folders: [],
+  tags: [],
+  folderData: {},
+  savedSearches: [],
+  searchLogic: 'AND',
+  searchActive: [],
+};
+
+function save() {
+  localStorage.setItem('dt_v4', JSON.stringify({
+    tags: state.tags,
+    folderData: state.folderData,
+    savedSearches: state.savedSearches,
+  }));
+}
+
+function load() {
+  try {
+    const d = JSON.parse(localStorage.getItem('dt_v4') || localStorage.getItem('driverTagger_v1') || '{}');
+    state.tags = d.tags || [];
+    state.folderData = d.folderData || {};
+    state.savedSearches = d.savedSearches || [];
+  } catch(e) {}
+}
+
+// ─────────────────────────────────────
+// AUTH
+// ─────────────────────────────────────
+function handleAuth() {
+  if (!localStorage.getItem('dt_client_id')) { showConfigModal(); return; }
+  if (!isSignedIn) {
+    tokenClient.requestAccessToken({ prompt: '' });
+  } else {
+    const token = gapi.client.getToken();
+    if (token) google.accounts.oauth2.revoke(token.access_token, () => {});
+    gapi.client.setToken('');
+    localStorage.removeItem('dt_token');
+    isSignedIn = false;
+    updateAuthUI(false);
+  }
+}
+
+async function initGapi() {
+  await gapi.client.init({ discoveryDocs: [DISCOVERY_DOC] });
+  gapiReady = true;
+}
+
+async function tryRestoreSession() {
+  const saved = localStorage.getItem('dt_token');
+  if (!saved) return false;
+  try {
+    const t = JSON.parse(saved);
+    if (Date.now() > t.expires_at) { localStorage.removeItem('dt_token'); return false; }
+    gapi.client.setToken({ access_token: t.access_token });
+    isSignedIn = true;
+    return true;
+  } catch(e) { localStorage.removeItem('dt_token'); return false; }
+}
+
+function updateAuthUI(signed) {
+  const btn = document.getElementById('btnAuth');
+  const status = document.getElementById('authStatus');
+  if (signed) {
+    btn.textContent = '🔓 Salir';
+    btn.style.background = '#374151';
+    status.textContent = '✓ Conectado';
+    status.style.color = 'var(--ol-green)';
+    document.getElementById('connectScreen').style.display = 'none';
+    document.getElementById('app-layout').style.display = 'flex';
+    document.getElementById('toolbar').style.display = 'flex';
+    document.getElementById('folder-search').style.display = 'block';
+  } else {
+    btn.textContent = '🔗 Conectar';
+    btn.style.background = 'var(--ol-accent)';
+    status.textContent = 'No conectado';
+    status.style.color = 'var(--ol-muted)';
+    document.getElementById('connectScreen').style.display = 'flex';
+    document.getElementById('app-layout').style.display = 'none';
+    document.getElementById('toolbar').style.display = 'none';
+  }
+}
+
+function showConfigModal() {
+  const html = `<div style="position:fixed;inset:0;background:rgba(0,0,0,0.7);z-index:400;display:flex;align-items:flex-end;justify-content:center;" id="cfgModal">
+    <div style="background:var(--ol-sidebar);border:1px solid var(--ol-border);border-radius:12px 12px 0 0;padding:20px;width:100%;max-width:500px;">
+      <div style="font-size:15px;font-weight:700;margin-bottom:12px;">⚙️ Client ID de Google</div>
+      <div style="background:var(--ol-bg);border-radius:6px;padding:10px;font-size:11px;color:var(--ol-muted);margin-bottom:12px;line-height:1.8;">
+        1. <strong style="color:var(--ol-text)">console.cloud.google.com</strong><br>
+        2. APIs → Drive API → Habilitar<br>
+        3. Credenciales → OAuth 2.0 → App web<br>
+        4. Origen JS: <code style="color:var(--ol-accent)">${window.location.origin}</code><br>
+        5. Pantalla consentimiento → agregar tu email como usuario de prueba
+      </div>
+      <input type="text" id="inputClientId" placeholder="xxxx.apps.googleusercontent.com" style="margin-bottom:10px;">
+      <div style="display:flex;gap:8px;">
+        <button class="btn btn-primary" onclick="applyClientId()">Guardar</button>
+        <button class="btn btn-secondary" onclick="document.getElementById('cfgModal').remove()">Cancelar</button>
+      </div>
+    </div>
+  </div>`;
+  document.body.insertAdjacentHTML('beforeend', html);
+}
+
+function applyClientId() {
+  const id = document.getElementById('inputClientId').value.trim();
+  if (!id) { toast('Ingresá el Client ID', true); return; }
+  localStorage.setItem('dt_client_id', id);
+  setTimeout(() => location.reload(), 800);
+}
+
+// ─────────────────────────────────────
+// CARPETAS
+// ─────────────────────────────────────
+async function loadFolders() {
+  try {
+    document.getElementById('content-subtitle').textContent = 'Cargando carpetas...';
+    let allFolders = [];
+    let pageToken = null;
+    let page = 0;
+
+    do {
+      const params = {
+        q: "mimeType='application/vnd.google-apps.folder' and trashed=false",
+        fields: 'nextPageToken, files(id,name)',
+        pageSize: 1000, // máximo permitido por la API
+        orderBy: 'name',
+      };
+      if (pageToken) params.pageToken = pageToken;
+
+      const resp = await gapi.client.drive.files.list(params);
+      const batch = resp.result.files || [];
+      allFolders = allFolders.concat(batch);
+      pageToken = resp.result.nextPageToken || null;
+      page++;
+
+      // Actualizar contador mientras carga
+      document.getElementById('content-subtitle').textContent =
+        `Cargando... ${allFolders.length} carpetas`;
+
+    } while (pageToken);
+
+    state.folders = allFolders;
+    renderFolderList();
+    updateSidebarCounts();
+    renderSidebarTags();
+    renderSidebarSearches();
+    updateBackupInfo();
+    toast(`${allFolders.length} carpetas cargadas ✓`);
+  } catch(e) {
+    toast('Error cargando carpetas', true);
+  }
+}
+
+function getFoldersForMode() {
+  const q = document.getElementById('folder-search').value.toLowerCase();
+  let list = state.folders;
+  if (currentFolderMode === 'tagged') {
+    list = list.filter(f => state.folderData[f.id]?.tags?.length > 0);
+  } else if (currentFolderMode === 'untagged') {
+    list = list.filter(f => !state.folderData[f.id]?.tags?.length);
+  } else if (currentFolderMode.startsWith('tag:')) {
+    const tagId = currentFolderMode.slice(4);
+    list = list.filter(f => state.folderData[f.id]?.tags?.includes(tagId));
+  }
+  if (q) list = list.filter(f => f.name.toLowerCase().includes(q));
+  return list;
+}
+
+// ─────────────────────────────────────
+// RENDER DE CARPETAS CON SCROLL INFINITO
+// ─────────────────────────────────────
+const PAGE_SIZE = 60;
+let renderedCount = 0;
+let currentList = [];
+
+function renderFolderList() {
+  currentList = getFoldersForMode();
+  renderedCount = 0;
+
+  const el = document.getElementById('folderListView');
+  document.getElementById('content-subtitle').textContent = `${currentList.length} carpeta(s)`;
+
+  if (!currentList.length) {
+    el.innerHTML = `<div class="empty-state"><div class="ei">📂</div><div class="et">No hay carpetas</div></div>`;
+    return;
+  }
+
+  el.innerHTML = '';
+  appendFolderRows(el);
+
+  // Scroll infinito
+  el.onscroll = () => {
+    if (el.scrollTop + el.clientHeight >= el.scrollHeight - 120) {
+      appendFolderRows(el);
+    }
+  };
+
+  // Volver al inicio siempre que se renderice de nuevo
+  el.scrollTop = 0;
+}
+
+function appendFolderRows(el) {
+  if (renderedCount >= currentList.length) return;
+  const batch = currentList.slice(renderedCount, renderedCount + PAGE_SIZE);
+  const fragment = document.createDocumentFragment();
+
+  batch.forEach(f => {
+    const data = state.folderData[f.id] || { tags: [], note: '' };
+    const chips = data.tags.map(tid => {
+      const tag = state.tags.find(t => t.id === tid);
+      if (!tag) return '';
+      return `<span class="tag-chip" style="background:${tag.color}22;color:${tag.color};border:1px solid ${tag.color}44">${tag.name}</span>`;
+    }).join('');
+    const note = data.note ? `<div class="folder-row-note">📝 ${data.note}</div>` : '';
+    const div = document.createElement('div');
+    div.className = 'folder-row';
+    div.innerHTML = `
+      <span class="folder-row-icon">📁</span>
+      <div class="folder-row-info">
+        <div class="folder-row-name">${f.name}</div>
+        <div class="folder-row-tags">${chips}</div>
+        ${note}
+      </div>`;
+    div.onclick = function() { openDetail(f.id, this); };
+    fragment.appendChild(div);
+  });
+
+  el.appendChild(fragment);
+  renderedCount += batch.length;
+
+  // Mostrar cuántas se ven de cuántas
+  if (renderedCount < currentList.length) {
+    document.getElementById('content-subtitle').textContent =
+      `${renderedCount} de ${currentList.length} carpeta(s) — scroll para ver más`;
+  } else {
+    document.getElementById('content-subtitle').textContent =
+      `${currentList.length} carpeta(s)`;
+  }
+}
+
+function filterFolderList() { renderFolderList(); }
+
+function showAllFolders() {
+  currentFolderMode = 'all';
+  setActiveSidebarItem('si-todas');
+  document.getElementById('content-title').textContent = '🗂️ Todas las carpetas';
+  switchView('carpetas');
+  renderFolderList();
+}
+
+function showTaggedFolders() {
+  currentFolderMode = 'tagged';
+  setActiveSidebarItem('si-etiquetadas');
+  document.getElementById('content-title').textContent = '🏷️ Carpetas etiquetadas';
+  switchView('carpetas');
+  renderFolderList();
+}
+
+function showUntaggedFolders() {
+  currentFolderMode = 'untagged';
+  setActiveSidebarItem('si-sin');
+  document.getElementById('content-title').textContent = '📂 Sin etiqueta';
+  switchView('carpetas');
+  renderFolderList();
+}
+
+function filterByTag(tagId) {
+  const tag = state.tags.find(t => t.id === tagId);
+  if (!tag) return;
+  currentFolderMode = 'tag:' + tagId;
+  setActiveSidebarItem('tag-' + tagId);
+  document.getElementById('content-title').textContent = `🏷️ ${tag.name}`;
+  switchView('carpetas');
+  renderFolderList();
+}
+
+function updateSidebarCounts() {
+  document.getElementById('count-todas').textContent = state.folders.length;
+  document.getElementById('count-etiquetadas').textContent =
+    state.folders.filter(f => state.folderData[f.id]?.tags?.length > 0).length;
+  document.getElementById('count-sin').textContent =
+    state.folders.filter(f => !state.folderData[f.id]?.tags?.length).length;
+}
+
+// ─────────────────────────────────────
+// SIDEBAR
+// ─────────────────────────────────────
+function toggleGroup(id) {
+  const el = document.getElementById(id);
+  const chv = document.getElementById('chv-' + id.replace('grp-',''));
+  el.classList.toggle('collapsed');
+  chv.classList.toggle('open');
+}
+
+function setActiveSidebarItem(id) {
+  document.querySelectorAll('.sidebar-item, .ss-row').forEach(el => el.classList.remove('active'));
+  const el = document.getElementById(id);
+  if (el) el.classList.add('active');
+}
+
+function renderSidebarSearches() {
+  const el = document.getElementById('savedSearchSidebar');
+  if (!state.savedSearches.length) {
+    el.innerHTML = `<div style="padding:8px 16px;font-size:11px;color:var(--ol-muted);">Sin carpetas de búsqueda</div>`;
+    return;
+  }
+  el.innerHTML = state.savedSearches.map(s =>
+    `<div class="ss-row" id="ss-${s.id}" onclick="runSavedSearch('${s.id}')">
+      <span style="font-size:13px;flex-shrink:0;">🔍</span>
+      <span class="ss-label">${s.name}</span>
+      <span class="ss-del" onclick="event.stopPropagation();deleteSavedSearch('${s.id}')">✕</span>
+    </div>`
+  ).join('');
+}
+
+function toggleSidebar() {
+  document.getElementById('sidebar').classList.toggle('collapsed');
+}
+
+// ─────────────────────────────────────
+// DETAIL PANEL (reading pane)
+// ─────────────────────────────────────
+let editingFolderId = null;
+
+function openDetail(folderId, el) {
+  editingFolderId = folderId;
+  const folder = state.folders.find(f => f.id === folderId);
+  const data = state.folderData[folderId] || { tags: [], note: '' };
+
+  document.getElementById('detailTitle').textContent = '📁 ' + folder.name;
+  document.getElementById('detailNote').value = data.note || '';
+  renderDetailTags(data.tags);
+  document.getElementById('detailPanel').classList.add('open');
+  document.getElementById('detailOverlay').classList.add('open');
+
+  // Mostrar botón Guardar en toolbar
+  document.getElementById('tb-save').style.display = 'inline-flex';
+
+  // Highlight row
+  document.querySelectorAll('.folder-row').forEach(r => r.classList.remove('selected'));
+  if (el) el.classList.add('selected');
+}
+
+function openInDrive() {
+  if (!editingFolderId) return;
+  // Abre la carpeta en la app de Google Drive en Android
+  const url = `https://drive.google.com/drive/folders/${editingFolderId}`;
+  window.open(url, '_blank');
+}
+
+function quickSaveDetail() {
+  // Guardar desde el botón de toolbar (misma lógica que saveDetail pero sin cerrar)
+  if (!editingFolderId) return;
+  const data = state.folderData[editingFolderId] || { tags: [], note: '' };
+  data.note = document.getElementById('detailNote').value;
+  state.folderData[editingFolderId] = data;
+  save();
+  renderFolderList();
+  updateSidebarCounts();
+  renderSidebarTags();
+  toast('Guardado ✓');
+}
+
+function renderDetailTags(activeTags) {
+  const curr = document.getElementById('detailCurrentTags');
+  const picker = document.getElementById('detailTagPicker');
+
+  // Mostrar tags activos con su ruta completa
+  curr.innerHTML = activeTags.length
+    ? activeTags.map(tid => {
+        const tag = state.tags.find(t => t.id === tid);
+        if (!tag) return '';
+        const path = getTagPath(tid);
+        return `<span class="tag-chip" style="background:${tag.color}22;color:${tag.color};border:1px solid ${tag.color}44"
+          title="${path}">
+          ${tag.name}
+          <span class="rm" onclick="removeDetailTag('${tid}')">✕</span>
+        </span>`;
+      }).join('')
+    : '<span style="font-size:11px;color:var(--ol-muted);">Sin etiquetas</span>';
+
+  // Picker: mostrar tags disponibles ordenados alfabéticamente
+  const avail = state.tags.filter(t => !activeTags.includes(t.id));
+  const availSorted = avail.slice().sort((a, b) => a.name.localeCompare(b.name, 'es', { sensitivity: 'base' }));
+  if (!availSorted.length) {
+    picker.innerHTML = '<span style="font-size:11px;color:var(--ol-muted);">Todas aplicadas</span>';
+    return;
+  }
+  picker.innerHTML = `<div style="display:flex;flex-wrap:wrap;gap:8px;margin-top:4px;">${
+    availSorted.map(tag =>
+      `<span class="tag-pill-lg" style="background:${tag.color}22;color:${tag.color};border:1px solid ${tag.color}44"
+        onclick="addDetailTag('${tag.id}')">${tag.name}</span>`
+    ).join('')
+  }</div>`;
+}
+
+function getTagPath(tagId) {
+  const parts = [];
+  let current = state.tags.find(t => t.id === tagId);
+  while (current) {
+    parts.unshift(current.name);
+    current = current.parentId ? state.tags.find(t => t.id === current.parentId) : null;
+  }
+  return parts.join(' › ');
+}
+
+function renderSidebarTags() {
+  const el = document.getElementById('tagsSidebar');
+  if (!state.tags.length) {
+    el.innerHTML = `<div style="padding:8px 16px;font-size:11px;color:var(--ol-muted);">Sin etiquetas</div>`;
+    return;
+  }
+
+  function renderSidebarLevel(tags, parentId = null, depth = 0) {
+    return tags
+      .filter(t => (t.parentId || null) === parentId)
+      .map(tag => {
+        const count = state.folders.filter(f => state.folderData[f.id]?.tags?.includes(tag.id)).length;
+        const children = tags.filter(t => t.parentId === tag.id);
+        const indent = depth * 10;
+        return `<div class="sidebar-item" id="tag-${tag.id}"
+          style="padding-left:${16 + indent}px;"
+          onclick="filterByTag('${tag.id}')">
+          <span class="si-icon" style="color:${tag.color};font-size:${depth > 0 ? '10px' : '13px'}">●</span>
+          <span class="si-label">${tag.name}</span>
+          ${count > 0 ? `<span class="si-count" style="background:${tag.color}">${count}</span>` : ''}
+        </div>
+        ${children.length ? renderSidebarLevel(tags, tag.id, depth + 1) : ''}`;
+      }).join('');
+  }
+
+  el.innerHTML = renderSidebarLevel(state.tags);
+}
+
+function addDetailTag(tagId) {
+  const data = state.folderData[editingFolderId] || { tags: [], note: '' };
+  if (!data.tags.includes(tagId)) data.tags.push(tagId);
+  state.folderData[editingFolderId] = data;
+  renderDetailTags(data.tags);
+}
+
+function removeDetailTag(tagId) {
+  const data = state.folderData[editingFolderId] || { tags: [], note: '' };
+  data.tags = data.tags.filter(t => t !== tagId);
+  state.folderData[editingFolderId] = data;
+  renderDetailTags(data.tags);
+}
+
+function saveDetail() {
+  const data = state.folderData[editingFolderId] || { tags: [], note: '' };
+  data.note = document.getElementById('detailNote').value;
+  state.folderData[editingFolderId] = data;
+  save();
+  closeDetail();
+  renderFolderList();
+  updateSidebarCounts();
+  renderSidebarTags();
+  toast('Guardado ✓');
+}
+
+function closeDetail() {
+  document.getElementById('detailPanel').classList.remove('open');
+  document.getElementById('detailOverlay').classList.remove('open');
+  document.querySelectorAll('.folder-row').forEach(r => r.classList.remove('selected'));
+  document.getElementById('tb-save').style.display = 'none';
+  editingFolderId = null;
+}
+
+// ─────────────────────────────────────
+// CARPETAS DE BÚSQUEDA (Outlook style)
+// ─────────────────────────────────────
+function renderNewSearchTagGrid() {
+  const el = document.getElementById('newSearchTagGrid');
+  if (!state.tags.length) {
+    el.innerHTML = '<span style="font-size:11px;color:var(--ol-muted);">Creá etiquetas primero</span>';
+    return;
+  }
+  el.innerHTML = state.tags.map(tag => {
+    const active = state.searchActive.includes(tag.id);
+    return `<span class="tag-pill-lg ${active ? 'sel' : ''}"
+      style="background:${tag.color}${active?'44':'22'};color:${tag.color};border:1px solid ${tag.color}${active?'':'44'}"
+      onclick="toggleNewSearchTag('${tag.id}')">${tag.name}</span>`;
+  }).join('');
+}
+
+function toggleNewSearchTag(tagId) {
+  if (state.searchActive.includes(tagId)) {
+    state.searchActive = state.searchActive.filter(t => t !== tagId);
+  } else {
+    state.searchActive.push(tagId);
+  }
+  renderNewSearchTagGrid();
+}
+
+function setLogic(logic) {
+  state.searchLogic = logic;
+  document.getElementById('logicAnd').classList.toggle('active', logic === 'AND');
+  document.getElementById('logicOr').classList.toggle('active', logic === 'OR');
+}
+
+function createSearchFolder() {
+  const name = document.getElementById('newSearchName').value.trim();
+  if (!name) { toast('Ingresá un nombre', true); return; }
+  if (!state.searchActive.length) { toast('Seleccioná al menos una etiqueta', true); return; }
+  state.savedSearches.push({
+    id: Date.now().toString(),
+    name,
+    tagIds: [...state.searchActive],
+    logic: state.searchLogic,
+  });
+  save();
+  renderSidebarSearches();
+  // Limpiar
+  document.getElementById('newSearchName').value = '';
+  state.searchActive = [];
+  renderNewSearchTagGrid();
+  toast('Carpeta de búsqueda creada ✓');
+  switchView('carpetas');
+  showAllFolders();
+}
+
+function runSavedSearch(id) {
+  const s = state.savedSearches.find(x => x.id === id);
+  if (!s) return;
+
+  // Highlight en sidebar
+  document.querySelectorAll('.sidebar-item, .ss-row').forEach(el => el.classList.remove('active'));
+  const ssEl = document.getElementById('ss-' + id);
+  if (ssEl) ssEl.classList.add('active');
+
+  currentSearchId = id;
+  document.getElementById('content-title').textContent = '🔍 ' + s.name;
+
+  const results = state.folders.filter(f => {
+    const data = state.folderData[f.id];
+    if (!data || !data.tags.length) return false;
+    return s.logic === 'AND'
+      ? s.tagIds.every(tid => data.tags.includes(tid))
+      : s.tagIds.some(tid => data.tags.includes(tid));
+  });
+
+  const logicLabel = s.logic === 'AND' ? 'con todas las etiquetas' : 'con alguna etiqueta';
+  document.getElementById('content-subtitle').textContent = `${results.length} resultado(s) ${logicLabel}`;
+
+  const el = document.getElementById('searchResultList');
+  if (!results.length) {
+    el.innerHTML = `<div class="empty-state"><div class="ei">🔍</div><div class="et">Sin resultados para esta búsqueda</div></div>`;
+  } else {
+    el.innerHTML = results.map(f => {
+      const data = state.folderData[f.id];
+      const chips = data.tags.map(tid => {
+        const tag = state.tags.find(t => t.id === tid);
+        if (!tag) return '';
+        return `<span class="tag-chip" style="background:${tag.color}22;color:${tag.color};border:1px solid ${tag.color}44">${tag.name}</span>`;
+      }).join('');
+      return `<div class="folder-row" onclick="openDetail('${f.id}',this)">
+        <span class="folder-row-icon">📁</span>
+        <div class="folder-row-info">
+          <div class="folder-row-name">${f.name}</div>
+          <div class="folder-row-tags">${chips}</div>
+        </div>
+      </div>`;
+    }).join('');
+  }
+
+  switchView('search-result');
+}
+
+function deleteSavedSearch(id) {
+  state.savedSearches = state.savedSearches.filter(s => s.id !== id);
+  save();
+  renderSidebarSearches();
+  toast('Carpeta de búsqueda eliminada');
+  if (currentSearchId === id) showAllFolders();
+}
+
+// ─────────────────────────────────────
+// ETIQUETAS (con árbol jerárquico)
+// ─────────────────────────────────────
+function initColorGrid() {
+  document.getElementById('colorGrid').innerHTML = COLORS.map(c =>
+    `<div class="color-dot ${c === selectedColor ? 'selected' : ''}" style="background:${c}" onclick="selectColor('${c}',false)"></div>`
+  ).join('');
+}
+
+let quickSelectedColor = COLORS[0];
+
+function initQuickColorGrid() {
+  document.getElementById('quickColorGrid').innerHTML = COLORS.map(c =>
+    `<div class="quick-color-dot ${c === quickSelectedColor ? 'selected' : ''}" style="background:${c}" onclick="selectColor('${c}',true)"></div>`
+  ).join('');
+}
+
+function selectColor(c, isQuick) {
+  if (isQuick) {
+    quickSelectedColor = c;
+    initQuickColorGrid();
+  } else {
+    selectedColor = c;
+    initColorGrid();
+  }
+}
+
+// Poblar selects de padre
+function populateParentSelects() {
+  const opts = ['<option value="">— Ninguna (etiqueta raíz) —</option>'];
+  // Solo etiquetas raíz y primer nivel como posibles padres
+  function addOpts(tags, depth = 0) {
+    tags.forEach(tag => {
+      const prefix = '　'.repeat(depth);
+      opts.push(`<option value="${tag.id}">${prefix}${tag.name}</option>`);
+      const children = state.tags.filter(t => t.parentId === tag.id);
+      if (children.length) addOpts(children, depth + 1);
+    });
+  }
+  addOpts(state.tags.filter(t => !t.parentId));
+
+  ['newTagParent','quickTagParent'].forEach(id => {
+    const el = document.getElementById(id);
+    if (el) el.innerHTML = opts.join('');
+  });
+}
+
+function createTag() {
+  const name = document.getElementById('newTagName').value.trim();
+  if (!name) { toast('Ingresá un nombre', true); return; }
+  if (state.tags.find(t => t.name.toLowerCase() === name.toLowerCase())) { toast('Ya existe', true); return; }
+  const parentId = document.getElementById('newTagParent').value || null;
+  state.tags.push({ id: Date.now().toString(), name, color: selectedColor, parentId });
+  document.getElementById('newTagName').value = '';
+  document.getElementById('newTagParent').value = '';
+  save();
+  renderTagLibrary();
+  renderSidebarTags();
+  populateParentSelects();
+  toast('Etiqueta creada ✓');
+}
+
+function createTagQuick() {
+  const name = document.getElementById('quickTagName').value.trim();
+  if (!name) { toast('Ingresá un nombre', true); return; }
+  if (state.tags.find(t => t.name.toLowerCase() === name.toLowerCase())) { toast('Ya existe', true); return; }
+  const parentId = document.getElementById('quickTagParent').value || null;
+  const newTag = { id: Date.now().toString(), name, color: quickSelectedColor, parentId };
+  state.tags.push(newTag);
+  document.getElementById('quickTagName').value = '';
+  save();
+  populateParentSelects();
+  renderSidebarTags();
+  // Aplicar automáticamente la nueva etiqueta a la carpeta actual
+  if (editingFolderId) {
+    const data = state.folderData[editingFolderId] || { tags: [], note: '' };
+    if (!data.tags.includes(newTag.id)) data.tags.push(newTag.id);
+    state.folderData[editingFolderId] = data;
+    renderDetailTags(data.tags);
+  }
+  toggleQuickTagForm();
+  toast('Etiqueta creada y aplicada ✓');
+}
+
+function toggleQuickTagForm() {
+  const form = document.getElementById('quickTagForm');
+  const visible = form.style.display !== 'none';
+  form.style.display = visible ? 'none' : 'block';
+  if (!visible) {
+    initQuickColorGrid();
+    populateParentSelects();
+    document.getElementById('quickTagName').focus();
+  }
+}
+
+// Renderizar árbol recursivo
+function renderTagTree(tags, parentId = null, depth = 0) {
+  const children = tags.filter(t => (t.parentId || null) === parentId);
+  if (!children.length) return '';
+
+  return children.map(tag => {
+    const subChildren = tags.filter(t => t.parentId === tag.id);
+    const hasChildren = subChildren.length > 0;
+    const nodeId = 'tnode-' + tag.id;
+    const count = state.folders.filter(f => state.folderData[f.id]?.tags?.includes(tag.id)).length;
+
+    return `<div class="tag-tree-node" data-tag-id="${tag.id}">
+      <div class="tag-tree-header"
+        draggable="true"
+        ondragstart="onTagDragStart(event,'${tag.id}')"
+        ondragover="onTagDragOver(event,'${tag.id}')"
+        ondragleave="onTagDragLeave(event)"
+        ondrop="onTagDrop(event,'${tag.id}')"
+        ondragend="onTagDragEnd(event)">
+        <span class="tag-tree-handle" title="Arrastrá para reordenar">⠿</span>
+        <span class="tag-tree-toggle ${hasChildren ? 'open' : ''}" id="chv-${tag.id}"
+          onclick="event.stopPropagation();${hasChildren ? `toggleTagNode('${tag.id}')` : ''}">
+          ${hasChildren ? '▶' : ''}
+        </span>
+        <span class="tag-tree-chip" style="background:${tag.color}22;color:${tag.color};border:1px solid ${tag.color}44">
+          ${tag.name}
+          ${count > 0 ? `<span style="font-size:11px;opacity:0.6;">(${count})</span>` : ''}
+        </span>
+        <div class="tag-tree-actions">
+          <button class="tag-tree-btn" onclick="event.stopPropagation();addChildTag('${tag.id}')" title="Sub-etiqueta">＋</button>
+          <button class="tag-tree-btn del" onclick="event.stopPropagation();askDeleteTag('${tag.id}')" title="Eliminar">✕</button>
+        </div>
+      </div>
+      ${hasChildren ? `<div class="tag-tree-children" id="${nodeId}">
+        ${renderTagTree(tags, tag.id, depth + 1)}
+      </div>` : ''}
+    </div>`;
+  }).join('');
+}
+
+function toggleTagNode(tagId) {
+  const el = document.getElementById('tnode-' + tagId);
+  const chv = document.getElementById('chv-' + tagId);
+  if (el) el.classList.toggle('hidden');
+  if (chv) chv.classList.toggle('open');
+}
+
+function addChildTag(parentId) {
+  // Pre-seleccionar padre en el form de etiquetas y navegar
+  switchView('etiquetas');
+  setTimeout(() => {
+    const sel = document.getElementById('newTagParent');
+    if (sel) sel.value = parentId;
+    document.getElementById('newTagName').focus();
+  }, 50);
+}
+
+function renderTagLibrary() {
+  const el = document.getElementById('tagLibrary');
+  if (!state.tags.length) {
+    el.innerHTML = `<div class="empty-state" style="padding:20px;"><div class="ei">🏷️</div><div class="et">Sin etiquetas aún</div></div>`;
+    return;
+  }
+  el.innerHTML = renderTagTree(state.tags);
+  populateParentSelects();
+}
+
+// ─────────────────────────────────────
+// CONFIRMACIÓN DE BORRADO
+// ─────────────────────────────────────
+let pendingDeleteId = null;
+
+function askDeleteTag(id) {
+  const tag = state.tags.find(t => t.id === id);
+  if (!tag) return;
+  const children = getAllTagDescendants(id);
+  const hasChildren = children.length > 0;
+  const msg = hasChildren
+    ? `¿Borrar "${tag.name}" y sus ${children.length} sub-etiqueta(s)? Esta acción no se puede deshacer.`
+    : `¿Borrar la etiqueta "${tag.name}"? Se quitará de todas las carpetas donde esté aplicada.`;
+  document.getElementById('confirmDeleteMsg').textContent = msg;
+  document.getElementById('modalConfirmDelete').style.display = 'flex';
+  pendingDeleteId = id;
+}
+
+function closeConfirmDelete() {
+  document.getElementById('modalConfirmDelete').style.display = 'none';
+  pendingDeleteId = null;
+}
+
+function confirmDeleteTag() {
+  if (!pendingDeleteId) return;
+  deleteTag(pendingDeleteId);
+  closeConfirmDelete();
+}
+
+function getAllTagDescendants(tagId) {
+  const result = [];
+  function collect(id) {
+    state.tags.filter(t => t.parentId === id).forEach(child => {
+      result.push(child.id);
+      collect(child.id);
+    });
+  }
+  collect(tagId);
+  return result;
+}
+
+function deleteTag(id) {
+  const toDelete = [id, ...getAllTagDescendants(id)];
+  state.tags = state.tags.filter(t => !toDelete.includes(t.id));
+  Object.keys(state.folderData).forEach(fid => {
+    if (state.folderData[fid].tags)
+      state.folderData[fid].tags = state.folderData[fid].tags.filter(t => !toDelete.includes(t));
+  });
+  save();
+  renderTagLibrary();
+  renderSidebarTags();
+  renderFolderList();
+  toast('Etiqueta eliminada');
+}
+
+// ─────────────────────────────────────
+// DRAG & DROP DE ETIQUETAS
+// ─────────────────────────────────────
+let dragTagId = null;
+
+function onTagDragStart(event, tagId) {
+  dragTagId = tagId;
+  event.dataTransfer.effectAllowed = 'move';
+  event.currentTarget.classList.add('dragging');
+}
+
+function onTagDragOver(event, tagId) {
+  if (tagId === dragTagId) return;
+  event.preventDefault();
+  event.dataTransfer.dropEffect = 'move';
+  event.currentTarget.classList.add('drag-over');
+}
+
+function onTagDragLeave(event) {
+  event.currentTarget.classList.remove('drag-over');
+}
+
+function onTagDrop(event, targetTagId) {
+  event.preventDefault();
+  event.currentTarget.classList.remove('drag-over');
+  if (!dragTagId || dragTagId === targetTagId) return;
+
+  // No permitir soltar en un descendiente propio
+  if (getAllTagDescendants(dragTagId).includes(targetTagId)) {
+    toast('No podés mover una etiqueta dentro de sí misma', true);
+    return;
+  }
+
+  const dragTag = state.tags.find(t => t.id === dragTagId);
+  const targetTag = state.tags.find(t => t.id === targetTagId);
+  if (!dragTag || !targetTag) return;
+
+  // Mover dragTag como hijo del padre del target, posicionado antes del target
+  const targetParentId = targetTag.parentId || null;
+  dragTag.parentId = targetParentId;
+
+  // Reordenar: mover dragTag antes del targetTag en el array
+  state.tags = state.tags.filter(t => t.id !== dragTagId);
+  const targetIdx = state.tags.findIndex(t => t.id === targetTagId);
+  state.tags.splice(targetIdx, 0, dragTag);
+
+  save();
+  renderTagLibrary();
+  renderSidebarTags();
+  toast('Etiqueta reordenada ✓');
+}
+
+function onTagDragEnd(event) {
+  event.currentTarget.classList.remove('dragging');
+  document.querySelectorAll('.tag-tree-header').forEach(h => h.classList.remove('drag-over'));
+  dragTagId = null;
+}
+
+// ─────────────────────────────────────
+// VIEWS / UI
+// ─────────────────────────────────────
+function switchView(name) {
+  document.querySelectorAll('.view').forEach(v => v.classList.remove('active'));
+  const v = document.getElementById('view-' + name);
+  if (v) v.classList.add('active');
+
+  // toolbar buttons
+  ['carpetas','etiquetas','config'].forEach(n => {
+    document.getElementById('tb-' + n)?.classList.toggle('active', n === name);
+  });
+
+  if (name === 'nueva-busqueda') renderNewSearchTagGrid();
+  if (name === 'etiquetas') renderTagLibrary();
+  if (name === 'config') updateBackupInfo();
+
+  // Show/hide search box
+  document.getElementById('folder-search').style.display =
+    (name === 'carpetas' || name === 'search-result') ? 'block' : 'none';
+}
+
+// ─────────────────────────────────────
+// BACKUP
+// ─────────────────────────────────────
+function exportBackup() {
+  const backup = { version: 2, exportedAt: new Date().toISOString(), tags: state.tags, folderData: state.folderData, savedSearches: state.savedSearches };
+  const blob = new Blob([JSON.stringify(backup, null, 2)], { type: 'application/json' });
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement('a');
+  const d = new Date(); const pad = n => String(n).padStart(2,'0');
+  a.download = `${d.getFullYear()} ${pad(d.getMonth()+1)} ${pad(d.getDate())} ${pad(d.getHours())}.${pad(d.getMinutes())} drive-tagger-backup.json`;
+  a.href = url; a.click(); URL.revokeObjectURL(url);
+  toast('Backup exportado ✓');
+}
+
+function importBackup(event) {
+  const file = event.target.files[0]; if (!file) return;
+  const reader = new FileReader();
+  reader.onload = e => {
+    try {
+      const data = JSON.parse(e.target.result);
+      if (!data.tags) { toast('Archivo inválido', true); return; }
+      state.tags = data.tags || [];
+      state.folderData = data.folderData || {};
+      state.savedSearches = data.savedSearches || [];
+      save();
+      renderTagLibrary(); renderSidebarTags(); renderSidebarSearches(); renderFolderList(); updateSidebarCounts();
+      toast(`Importado: ${state.tags.length} etiquetas, ${state.savedSearches.length} búsquedas`);
+      updateBackupInfo();
+    } catch(e) { toast('Error al leer archivo', true); }
+  };
+  reader.readAsText(file); event.target.value = '';
+}
+
+function updateBackupInfo() {
+  const el = document.getElementById('backupInfo'); if (!el) return;
+  const fc = Object.keys(state.folderData).filter(k => state.folderData[k]?.tags?.length > 0).length;
+  el.textContent = `${state.tags.length} etiquetas · ${fc} carpetas etiquetadas · ${state.savedSearches.length} carpetas de búsqueda`;
+}
+
+// ─────────────────────────────────────
+// TOAST
+// ─────────────────────────────────────
+let toastTimer;
+function toast(msg, isError = false) {
+  const el = document.getElementById('toast');
+  el.textContent = isError ? '⚠️ ' + msg : '✓ ' + msg;
+  el.className = 'show' + (isError ? ' error' : '');
+  clearTimeout(toastTimer);
+  toastTimer = setTimeout(() => el.className = '', 2500);
+}
+
+// ─────────────────────────────────────
+// INIT
+// ─────────────────────────────────────
+window.onload = () => {
+  load();
+  initColorGrid();
+  renderTagLibrary();
+
+  const savedClientId = localStorage.getItem('dt_client_id');
+  if (!savedClientId) return;
+
+  const s1 = document.createElement('script');
+  s1.src = 'https://apis.google.com/js/api.js';
+  s1.onload = () => gapi.load('client', async () => {
+    await initGapi();
+    const restored = await tryRestoreSession();
+    if (restored) { updateAuthUI(true); await loadFolders(); }
+  });
+  document.head.appendChild(s1);
+
+  const s2 = document.createElement('script');
+  s2.src = 'https://accounts.google.com/gsi/client';
+  s2.onload = () => {
+    tokenClient = google.accounts.oauth2.initTokenClient({
+      client_id: savedClientId,
+      scope: SCOPES,
+      callback: async (resp) => {
+        if (resp.error) { toast('Error de autenticación', true); return; }
+        const expiresAt = Date.now() + (resp.expires_in - 60) * 1000;
+        localStorage.setItem('dt_token', JSON.stringify({ access_token: resp.access_token, expires_at: expiresAt }));
+        isSignedIn = true;
+        updateAuthUI(true);
+        await loadFolders();
+      },
+    });
+    document.getElementById('btnAuth').onclick = handleAuth;
+  };
+  document.head.appendChild(s2);
+};
+</script>
+</body>
+</html>
